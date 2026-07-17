@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard de Instructores (IDE-TC) - Seguridad Operacional PVA</title>
   
-  <!-- CORRECCIÓN: Tailwind CSS Play CDN oficial para habilitar el motor de estilos -->
+  <!-- Tailwind CSS Play CDN oficial -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js para visualización de gráficos -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -45,7 +45,6 @@
   </script>
 
   <style>
-    /* Estilos personalizados para scroll y transiciones */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -63,7 +62,6 @@
     .custom-transition {
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    /* Estilos para el texto Markdown renderizado de la IA */
     .prose-ai h1, .prose-ai h2, .prose-ai h3 {
       color: #ffffff;
       font-weight: 700;
@@ -107,10 +105,10 @@
     
     <!-- Excel Uploader & Status Indicator & Gemini API Key -->
     <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-      <!-- Gemini API Key (Opcional) -->
-      <div class="relative w-full sm:w-48">
-        <i data-lucide="key-round" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500"></i>
-        <input type="password" id="geminiApiKey" placeholder="Clave API Gemini (Opcional)" class="w-full bg-slate-950 border border-slate-800 text-[11px] rounded-xl pl-8 pr-3 py-2 text-slate-300 focus:outline-none focus:border-violet-500" title="Dejar en blanco para usar clave del playground" />
+      <!-- Gemini API Key -->
+      <div class="relative w-full sm:w-56">
+        <i data-lucide="key-round" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400"></i>
+        <input type="password" id="geminiApiKey" placeholder="Clave API Gemini (Obligatorio en GitHub)" class="w-full bg-slate-950 border border-slate-800 text-[11px] rounded-xl pl-8 pr-3 py-2 text-slate-300 focus:outline-none focus:border-violet-500" title="Ingresa tu clave de Google AI Studio para usar el Copiloto IA en tu servidor" />
       </div>
 
       <div id="statusIndicator" class="flex items-center gap-2 text-xs bg-amber-950/30 border border-amber-800/80 text-amber-300 px-3.5 py-2 rounded-xl w-full sm:w-auto justify-center">
@@ -171,6 +169,16 @@
           </select>
         </div>
 
+        <!-- NEW FILTER: Resultado de Evaluación (Satis vs Insatis) -->
+        <div class="mb-4">
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">Resultado de Evaluación</label>
+          <select id="filterResult" class="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl p-3 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none">
+            <option value="ALL">Todos los resultados</option>
+            <option value="SATISFACTORIO">SATISFACTORIO</option>
+            <option value="INSATISFACTORIO">INSATISFACTORIO</option>
+          </select>
+        </div>
+
         <!-- Filter Company / Airline -->
         <div class="mb-4">
           <label class="block text-xs font-medium text-slate-300 mb-1.5">Operador Aéreo</label>
@@ -221,7 +229,7 @@
     <!-- MAIN CONTENT SCROLL -->
     <main class="flex-1 overflow-y-auto p-6 space-y-6">
       
-      <!-- KPI CARDS GRID (IDE-TC Centric) -->
+      <!-- KPI CARDS GRID -->
       <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <!-- KPI 1: Total Instructores -->
         <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800/80 flex items-center justify-between shadow-md relative overflow-hidden">
@@ -236,7 +244,7 @@
           <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-violet-500/5 rounded-full blur-xl"></div>
         </div>
 
-        <!-- KPI 2: Total Chequeos (Evaluaciones únicas) -->
+        <!-- KPI 2: Total Chequeos -->
         <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800/80 flex items-center justify-between shadow-md relative overflow-hidden">
           <div class="space-y-1 z-10">
             <span class="text-xs font-medium text-slate-400 block">Total Chequeos</span>
@@ -286,7 +294,7 @@
             <p class="text-xs text-slate-400">Selecciona un instructor para explorar sus chequeos y dimensiones</p>
           </div>
           <div class="flex-1 overflow-y-auto space-y-2.5 pr-1" id="ideListContainer">
-            <!-- Renderizado dinámico de instructores -->
+            <!-- Carga dinámica -->
           </div>
         </div>
 
@@ -296,12 +304,12 @@
             <h3 class="text-sm font-semibold text-white">Tipos de Chequeo</h3>
             <p class="text-xs text-slate-400" id="chartCategorySubtitle">Distribución del instructor o global</p>
           </div>
-          <div class="flex-1 relative flex items-center justify-center min-h-0">
-            <canvas id="categoryChart" class="max-h-[220px]"></canvas>
+          <div class="flex-1 relative flex items-center justify-center min-h-0 w-full">
+            <div class="absolute inset-0 flex items-center justify-center p-2">
+              <canvas id="categoryChart"></canvas>
+            </div>
           </div>
-          <div class="mt-2 text-center text-xs text-slate-500" id="categoryChartLegend">
-            <!-- Datos adicionales de categorías -->
-          </div>
+          <div class="mt-2 text-center text-xs text-slate-500" id="categoryChartLegend"></div>
         </div>
 
         <!-- ALERTS AND FAILS BY DIMENSION -->
@@ -310,8 +318,10 @@
             <h3 class="text-sm font-semibold text-white">Dimensiones con Mayor Falla/Observación</h3>
             <p class="text-xs text-slate-400">Sub-dimensiones evaluadas con Alerta o Insatisfactorio</p>
           </div>
-          <div class="flex-1 relative min-h-0">
-            <canvas id="dimensionFailuresChart"></canvas>
+          <div class="flex-1 relative min-h-0 w-full">
+            <div class="absolute inset-0">
+              <canvas id="dimensionFailuresChart"></canvas>
+            </div>
           </div>
         </div>
 
@@ -329,13 +339,11 @@
             </div>
           </div>
           
-          <!-- Search box inside list -->
           <div class="relative w-full mb-3">
             <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-slate-500"></i>
             <input type="text" id="checkSearchInput" placeholder="Buscar por Evaluado, ID de Chequeo..." class="w-full bg-slate-950 border border-slate-800/80 text-xs rounded-xl pl-9 pr-3 py-2.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500" />
           </div>
 
-          <!-- Micro Table Container -->
           <div class="flex-1 overflow-y-auto pr-1">
             <table class="w-full text-left border-collapse text-xs">
               <thead>
@@ -345,9 +353,7 @@
                   <th class="pb-2 text-right">Resultado</th>
                 </tr>
               </thead>
-              <tbody id="checksTableBody" class="divide-y divide-slate-800/50">
-                <!-- Se poblará dinámicamente -->
-              </tbody>
+              <tbody id="checksTableBody" class="divide-y divide-slate-800/50"></tbody>
             </table>
           </div>
         </div>
@@ -362,18 +368,16 @@
               </button>
               <button id="tabCopiloto" class="text-xs font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center gap-1.5 focus:outline-none">
                 <i data-lucide="bot" class="w-3.5 h-3.5 text-indigo-400"></i> Copiloto IA SMS
-                <span class="bg-indigo-950/80 text-[9px] text-indigo-400 border border-indigo-800/50 px-1.5 py-0.2 rounded-full font-medium">BETA</span>
+                <span class="bg-indigo-950/80 text-[9px] text-indigo-400 border border-indigo-800/50 px-1.5 py-0.2 rounded-full font-medium">ESTABLE</span>
               </button>
             </div>
-            <div id="selectedCheckBadge" class="hidden">
-              <!-- Result pill of selected check -->
-            </div>
+            <div id="selectedCheckBadge" class="hidden"></div>
           </div>
 
           <!-- TAB CONTENT 1: VISOR DE CAPAS -->
           <div id="panelVisor" class="flex-1 flex flex-col min-h-0">
             <div id="drilldownCardContainer" class="flex-1 flex flex-col justify-center items-center text-center p-6 bg-slate-950/40 border border-dashed border-slate-800 rounded-xl overflow-y-auto">
-              <!-- Initial state: instruct user to click a check -->
+              <!-- Initial state -->
               <div class="max-w-xs space-y-3" id="drilldownEmptyState">
                 <div class="bg-slate-900 w-12 h-12 rounded-full flex items-center justify-center mx-auto text-slate-500">
                   <i data-lucide="mouse-pointer-click" class="w-6 h-6"></i>
@@ -384,9 +388,8 @@
                 </p>
               </div>
 
-              <!-- Active content: Hidden by default -->
+              <!-- Active content -->
               <div id="drilldownActiveContent" class="w-full text-left space-y-4 hidden h-full flex flex-col justify-start">
-                <!-- Meta Card header -->
                 <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 flex justify-between gap-4 items-center shrink-0">
                   <div>
                     <div class="flex items-center gap-2">
@@ -411,9 +414,7 @@
                 </div>
 
                 <!-- Dimensions layer (First Capa) -->
-                <div class="flex-1 overflow-y-auto space-y-2.5 pr-1 animate-fadeIn" id="dimensionsAccordionContainer">
-                  <!-- Se poblará dinámicamente con acordeones -->
-                </div>
+                <div class="flex-1 overflow-y-auto space-y-2.5 pr-1" id="dimensionsAccordionContainer"></div>
               </div>
             </div>
           </div>
@@ -423,7 +424,7 @@
             <div class="flex-1 bg-slate-950/60 border border-slate-800/80 rounded-xl flex flex-col overflow-hidden">
               <!-- Chat Log Area -->
               <div id="aiChatLog" class="flex-1 p-4 overflow-y-auto space-y-4 text-xs">
-                <!-- Welcome Assistant Message -->
+                <!-- Welcome Message -->
                 <div class="flex gap-3 items-start">
                   <div class="bg-indigo-600/25 p-2 rounded-xl text-indigo-400 border border-indigo-800/30 shrink-0">
                     <i data-lucide="bot" class="w-4 h-4"></i>
@@ -434,13 +435,13 @@
                       ¡Hola! Soy tu asistente de análisis de riesgos aeronáuticos e instrucción. Estoy entrenado bajo metodologías de gestión de seguridad aérea (**SMS**) y factores humanos (**HFACS**).
                     </p>
                     <p class="text-slate-400 mt-1.5">
-                      Puedo ayudarte a proponer planes de re-entrenamiento (CAP), identificar patrones de desviaciones críticas basándome en tus datos cargados, o estructurar pautas de estandarización para tus **IDE-TC**. ¿En qué puedo apoyarte hoy?
+                      Para usar mi inteligencia en tu servidor público, asegúrate de **pegar tu Clave API de Gemini** en la esquina superior derecha. ¿En qué puedo apoyarte hoy?
                     </p>
                   </div>
                 </div>
               </div>
 
-              <!-- Prompt chips quick selection -->
+              <!-- Prompt chips -->
               <div class="px-4 py-2 bg-slate-900/40 border-t border-slate-800 flex flex-wrap gap-2 shrink-0">
                 <button class="ai-chip bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer" data-prompt="¿Cuáles son las 3 dimensiones con mayor cantidad de desviaciones (observaciones/fallas) y qué medidas preventivas sugieres bajo un enfoque SMS?">
                   🚨 Identificar Dimensiones de Riesgo
@@ -483,8 +484,6 @@
 
   <!-- CORE CONTROLLER & LOGIC -->
   <script>
-    // --- PRE-LOADED DATA (Calculated from the exact properties of PVA 2020-2025 DATA.xlsx) ---
-    // These reflect realistic ratios and accurate IDE-TC mappings extracted from the 12,698 unique evaluations.
     const defaultData = {
       instructors: [
         { name: "FIORELLA DEL PILAR RUIZ RIOJA", count: 7250, satisf: 7202, insat: 48, rate: 99.34, role: "Instructor Senior (IDE-TC)" },
@@ -507,7 +506,6 @@
         "H. ATERRIZAJE": 6,
         "D. RODAJE": 4
       },
-      // Real sample evaluations structured dynamically with 1st Layer (Dimensiones) and 2nd Layer (Sub-dimensiones)
       chequeos: [
         {
           id: "0000018-2020",
@@ -554,42 +552,6 @@
           }
         },
         {
-          id: "0000342-2021",
-          evaluado: "GABRIEL ALONSO URTEAGA LOPEZ",
-          ideTC: "JUAN CARLOS GUERRERO VALDEZ",
-          fecha: "25/08/2021",
-          categoria: "INICIAL",
-          empresa: "SKY AIRLINE PERU S.A.C.",
-          resultadoFinal: "SATISFACTORIO",
-          anio: 2021,
-          dimensiones: {
-            "A. BRIEFING": [
-              { subdimension: "1.- Briefing de Despegue", resultado: "SATISFACTORIO" }
-            ],
-            "M. SITUACIONES DE EMERGENCIA": [
-              { subdimension: "1.- Coordinación de cabina", resultado: "SATISFACTORIO" }
-            ]
-          }
-        },
-        {
-          id: "0001550-2022",
-          evaluado: "DANIEL AUGUSTO GOMEZ VARGAS",
-          ideTC: "PATRICIA GOMEZ ARELLANO",
-          fecha: "15/02/2022",
-          categoria: "RECALIFICACION",
-          empresa: "LATAM AIRLINES PERU",
-          resultadoFinal: "SATISFACTORIO",
-          anio: 2022,
-          dimensiones: {
-            "G. DESCENSO": [
-              { subdimension: "1.- Procedimientos de aproximación", resultado: "SATISFACTORIO" }
-            ],
-            "H. ATERRIZAJE": [
-              { subdimension: "1.- Uso de reversas", resultado: "SATISFACTORIO" }
-            ]
-          }
-        },
-        {
           id: "0002883-2023",
           evaluado: "VANESSA MARIEL ORE QUISPE",
           ideTC: "PATRICIA GOMEZ ARELLANO",
@@ -609,36 +571,6 @@
           }
         },
         {
-          id: "0004901-2024",
-          evaluado: "JOSE CARLOS PORTOCARRERO SALDIAS",
-          ideTC: "JUAN CARLOS GUERRERO VALDEZ",
-          fecha: "18/05/2024",
-          categoria: "COMPETENCIA",
-          empresa: "LATAM AIRLINES PERU",
-          resultadoFinal: "SATISFACTORIO",
-          anio: 2024,
-          dimensiones: {
-            "A. BRIEFING": [
-              { subdimension: "1.- Coordinación de Tripulación", resultado: "SATISFACTORIO" }
-            ]
-          }
-        },
-        {
-          id: "0006772-2024",
-          evaluado: "RICARDO ENRIQUE ALVAREZ CASTRO",
-          ideTC: "CARLOS ENRIQUE SANCHEZ PINTO",
-          fecha: "30/10/2024",
-          categoria: "TRANSICION",
-          empresa: "STAR UP S.A.C.",
-          resultadoFinal: "SATISFACTORIO",
-          anio: 2024,
-          dimensiones: {
-            "P. CABINA DE MANDO": [
-              { subdimension: "2.- Sucesión de Mandos", resultado: "SATISFACTORIO" }
-            ]
-          }
-        },
-        {
           id: "0008552-2025",
           evaluado: "SERGIO EDUARDO PAREDES MENDEZ",
           ideTC: "FIORELLA DEL PILAR RUIZ RIOJA",
@@ -652,43 +584,25 @@
               { subdimension: "2.- Procedimientos de Evacuación", resultado: "SATISFACTORIO" }
             ]
           }
-        },
-        {
-          id: "0009120-2025",
-          evaluado: "NATHALY MILAGROS ROJAS DIAZ",
-          ideTC: "JUAN CARLOS GUERRERO VALDEZ",
-          fecha: "22/02/2025",
-          categoria: "COMPETENCIA",
-          empresa: "SKY AIRLINE PERU S.A.C.",
-          resultadoFinal: "SATISFACTORIO",
-          anio: 2025,
-          dimensiones: {
-            "P. CABINA DE MANDO": [
-              { subdimension: "1.- Cabina esterilizada", resultado: "SATISFACTORIO" }
-            ]
-          }
         }
       ]
     };
 
-    // Global App State
     let activeData = JSON.parse(JSON.stringify(defaultData)); 
-    let parsedExcelData = null; // Raw rows from SheetJS if loaded
-    let selectedInstructor = null; // Filter state for selected IDE-TC
-    let selectedCheck = null; // Drilldown visualization state
+    let parsedExcelData = null; 
+    let selectedInstructor = null; 
+    let selectedCheck = null; 
 
-    // Chart instances
     let categoryChartInstance = null;
     let dimensionChartInstance = null;
 
-    // Filters Selected
     let currentFilters = {
       year: "ALL",
       company: "ALL",
-      category: "ALL"
+      category: "ALL",
+      result: "ALL" // Inicialización del nuevo filtro
     };
 
-    // Bootstrapping
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
       setupFilters();
@@ -696,14 +610,12 @@
       renderAll();
     });
 
-    // Setup interactive AI Tab transitions and actions
     function setupAiFeatures() {
       const tabVisor = document.getElementById("tabVisor");
       const tabCopiloto = document.getElementById("tabCopiloto");
       const panelVisor = document.getElementById("panelVisor");
       const panelCopiloto = document.getElementById("panelCopiloto");
 
-      // Tab transitions
       tabVisor.addEventListener("click", () => {
         tabVisor.className = "text-xs font-bold pb-2 border-b-2 border-violet-500 text-white flex items-center gap-1.5 focus:outline-none";
         tabCopiloto.className = "text-xs font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center gap-1.5 focus:outline-none";
@@ -718,7 +630,6 @@
         panelVisor.classList.add("hidden");
       });
 
-      // Quick Chips Listener
       document.querySelectorAll(".ai-chip").forEach(chip => {
         chip.addEventListener("click", () => {
           const prompt = chip.getAttribute("data-prompt");
@@ -727,17 +638,14 @@
         });
       });
 
-      // Submit buttons
       document.getElementById("aiSendBtn").addEventListener("click", handleAiMessage);
       document.getElementById("aiChatInput").addEventListener("keypress", (e) => {
         if (e.key === "Enter") handleAiMessage();
       });
 
-      // Corrective Action Plan Button (CAP Generator)
       document.getElementById("aiPlanBtn").addEventListener("click", () => {
         if (!selectedCheck) return;
         
-        // Formulate customized request for the selected check
         const failedItems = [];
         const dims = selectedCheck.dimensiones || {};
         Object.keys(dims).forEach(d => {
@@ -763,19 +671,22 @@
         promptText += `3. **Estrategia de Re-entrenamiento Práctico**: Plan específico en simulador de vuelo o instrucción teórica.\n`;
         promptText += `4. **Estandarización para el IDE-TC**: Guía para que el instructor verifique la corrección en la próxima sesión.`;
 
-        // Switch to Copiloto Tab and fire prompt
         tabCopiloto.click();
         document.getElementById("aiChatInput").value = promptText;
         handleAiMessage();
       });
     }
 
-    // Helper para realizar llamadas a la API de Gemini con reintentos y exponencial backoff
     async function callGeminiAPI(userPrompt, systemPrompt) {
       const customKey = document.getElementById("geminiApiKey").value.trim();
-      // Si la clave manual está vacía, el fetch enviará clave vacía ("") para que Canvas inyecte su clave en runtime
-      const apiKey = customKey || ""; 
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+      
+      // Validador obligatorio para alertar al usuario que está en GitHub
+      if (!customKey) {
+        throw new Error("CLAVE_FALTANTE");
+      }
+
+      // Cambiamos a gemini-1.5-flash para que acepte API keys estándar sin restricciones de Developer Preview
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${customKey}`;
 
       const payload = {
         contents: [{ parts: [{ text: userPrompt }] }],
@@ -797,7 +708,6 @@
 
           if (!response.ok) {
             if (response.status === 429 && retries > 0) {
-              console.debug(`Throttled (429). Reintentando en ${delay}ms...`);
               await new Promise(resolve => setTimeout(resolve, delay));
               retries--;
               delay *= 2;
@@ -816,7 +726,6 @@
           if (retries === 0) {
             throw error;
           }
-          console.debug(`Error detectado: ${error.message}. Reintentando...`);
           await new Promise(resolve => setTimeout(resolve, delay));
           retries--;
           delay *= 2;
@@ -824,7 +733,6 @@
       }
     }
 
-    // Helper para armar un sumario compacto del dataset actual para inyectar como contexto operacional de aviación
     function getOperationalContextString() {
       let totalChecks = 0;
       let totalSatisf = 0;
@@ -848,21 +756,17 @@
 - Chequeos con Resultado Insatisfactorio: ${totalInsat}.
 - Top de Dimensiones Críticas Registradas en el periodo:
 ${failureSummary || "Ninguna registrada con alerta."}
-- Filtros Activos: Año: ${currentFilters.year}, Empresa: ${currentFilters.company}, Categoría: ${currentFilters.category}, Instructor Seleccionado: ${selectedInstructor || "Todos"}`;
+- Filtros Activos: Año: ${currentFilters.year}, Empresa: ${currentFilters.company}, Categoría: ${currentFilters.category}, Resultado: ${currentFilters.result}, Instructor Seleccionado: ${selectedInstructor || "Todos"}`;
     }
 
-    // Manejador del ciclo de vida del chat con la IA
     async function handleAiMessage() {
       const inputEl = document.getElementById("aiChatInput");
       const userText = inputEl.value.trim();
       if (!userText) return;
 
-      // Clear input
       inputEl.value = "";
-
       const chatLog = document.getElementById("aiChatLog");
 
-      // 1. Append User Message to Log
       const userMsgDiv = document.createElement("div");
       userMsgDiv.className = "flex gap-3 items-start justify-end";
       userMsgDiv.innerHTML = `
@@ -878,7 +782,6 @@ ${failureSummary || "Ninguna registrada con alerta."}
       chatLog.scrollTop = chatLog.scrollHeight;
       lucide.createIcons();
 
-      // 2. Append Loading Assistant message
       const loaderId = `ai-loader-${Date.now()}`;
       const assistantMsgDiv = document.createElement("div");
       assistantMsgDiv.className = "flex gap-3 items-start";
@@ -901,7 +804,6 @@ ${failureSummary || "Ninguna registrada con alerta."}
       chatLog.scrollTop = chatLog.scrollHeight;
       lucide.createIcons();
 
-      // 3. Call Gemini
       const systemPrompt = `Actúa como un copiloto experto en Seguridad Operacional (SMS - Safety Management System) y factores humanos bajo el enfoque de la OACI para instrucción de vuelo (programa PVA) y estandarización de instructores (IDE-TC).
 Tu objetivo es analizar desviaciones operacionales en pilotos comerciales, predecir tendencias de fallas y formular planes de re-entrenamiento (Planes de Acción Correctiva - CAP) basados en entrenamiento orientado a competencias (CBTA) y taxonomías HFACS.
 Siempre sé profesional, técnico, conciso y utiliza terminología aeronáutica apropiada. No utilices jerga coloquial.
@@ -912,7 +814,6 @@ ${getOperationalContextString()}`;
         const aiResponseMarkdown = await callGeminiAPI(userText, systemPrompt);
         const aiResponseHTML = marked.parse(aiResponseMarkdown);
 
-        // Update loader container with the final response
         const loaderContainer = document.getElementById(loaderId);
         loaderContainer.innerHTML = `
           <p class="font-semibold text-indigo-300">Copiloto IA - Seguridad Operacional PVA</p>
@@ -921,26 +822,36 @@ ${getOperationalContextString()}`;
           </div>
         `;
       } catch (err) {
-        console.error("AI Error:", err);
         const loaderContainer = document.getElementById(loaderId);
-        loaderContainer.innerHTML = `
-          <p class="font-semibold text-rose-400">Error del Copiloto IA</p>
-          <p class="text-xs text-rose-300/80">
-            No se pudo completar la consulta con la API de Gemini. 
-            Detalle técnico: ${err.message}. 
-            ${!document.getElementById("geminiApiKey").value.trim() ? "Por favor verifica que cuentas con acceso a internet o ingresa una Clave API Gemini válida en la parte superior derecha." : ""}
-          </p>
-        `;
+        if (err.message === "CLAVE_FALTANTE") {
+          loaderContainer.innerHTML = `
+            <p class="font-semibold text-rose-400">Clave de API Requerida</p>
+            <p class="text-xs text-rose-300/80">
+              Para usar el Copiloto IA en tu servidor público, necesitas ingresar tu clave API de Gemini en el recuadro superior derecho.
+            </p>
+            <p class="text-[10px] text-slate-400 mt-2">
+              <strong>¿Cómo obtener una?</strong><br>
+              1. Entra gratis a <a href="https://aistudio.google.dev/" target="_blank" class="text-indigo-400 underline font-semibold">Google AI Studio</a> con tu cuenta de Gmail.<br>
+              2. Presiona <strong>Get API Key</strong> y luego <strong>Create API Key</strong>.<br>
+              3. Copia el código largo y pégalo en el menú superior del dashboard.
+            </p>
+          `;
+        } else {
+          loaderContainer.innerHTML = `
+            <p class="font-semibold text-rose-400">Error del Copiloto IA</p>
+            <p class="text-xs text-rose-300/80">
+              No se pudo completar la consulta con la API de Gemini. Detalle técnico: ${err.message}. 
+            </p>
+          `;
+        }
       }
 
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
     function setupFilters() {
-      // Excel File Upload Listener
       document.getElementById("excelFile").addEventListener("change", handleExcelUpload);
 
-      // Sidebar Filter Listeners
       document.getElementById("filterYear").addEventListener("change", (e) => {
         currentFilters.year = e.target.value;
         document.getElementById("resetYear").classList.toggle("hidden", e.target.value === "ALL");
@@ -954,6 +865,11 @@ ${getOperationalContextString()}`;
         applyFiltersAndRebuild();
       });
 
+      document.getElementById("filterResult").addEventListener("change", (e) => {
+        currentFilters.result = e.target.value;
+        applyFiltersAndRebuild();
+      });
+
       document.getElementById("filterCompany").addEventListener("change", (e) => {
         currentFilters.company = e.target.value;
         applyFiltersAndRebuild();
@@ -964,35 +880,31 @@ ${getOperationalContextString()}`;
         applyFiltersAndRebuild();
       });
 
-      // Clear instructor focus filter
       document.getElementById("clearInstructorFilter").addEventListener("click", () => {
         selectedInstructor = null;
         document.getElementById("activeInstructorCard").classList.add("hidden");
         applyFiltersAndRebuild();
       });
 
-      // Reset All Filters button
       document.getElementById("resetAllFilters").addEventListener("click", () => {
-        currentFilters = { year: "ALL", company: "ALL", category: "ALL" };
+        currentFilters = { year: "ALL", company: "ALL", category: "ALL", result: "ALL" };
         selectedInstructor = null;
 
-        // Reset Inputs in UI
         document.getElementById("filterYear").value = "ALL";
         document.getElementById("filterCompany").value = "ALL";
         document.getElementById("filterCategory").value = "ALL";
+        document.getElementById("filterResult").value = "ALL";
         document.getElementById("resetYear").classList.add("hidden");
         document.getElementById("activeInstructorCard").classList.add("hidden");
         
         applyFiltersAndRebuild();
       });
 
-      // Check list search box
       document.getElementById("checkSearchInput").addEventListener("input", (e) => {
         renderChecksTable(e.target.value.toLowerCase());
       });
     }
 
-    // Chart Builders
     function buildCategoryChart(labels, dataset) {
       if (categoryChartInstance) categoryChartInstance.destroy();
       const ctx = document.getElementById("categoryChart").getContext("2d");
@@ -1075,14 +987,10 @@ ${getOperationalContextString()}`;
       });
     }
 
-    // Main Rendering Orchestrator
     function renderAll() {
-      // 1. KPI Cards Computation
-      // Instructors Count
       const activeInstructorsList = activeData.instructors;
       document.getElementById("kpiInstructores").innerText = activeInstructorsList.length;
 
-      // Checks count
       let totalChecks = 0;
       let totalSatisf = 0;
       let totalInsat = 0;
@@ -1099,7 +1007,6 @@ ${getOperationalContextString()}`;
       document.getElementById("kpiTasaAprobacion").innerText = `${avgSuccessRate.toFixed(2)}%`;
       document.getElementById("kpiInsatisfactorios").innerText = totalInsat;
 
-      // Update subtitle sub-texts
       if (selectedInstructor) {
         document.getElementById("kpiTotalChequeosSub").innerText = `Realizados por ${selectedInstructor.split(" ")[0]}`;
         document.getElementById("kpiTasaAprobacionSub").innerText = "Instructor seleccionado";
@@ -1110,10 +1017,8 @@ ${getOperationalContextString()}`;
         document.getElementById("kpiInsatisfactoriosSub").innerText = "Casos críticos globales";
       }
 
-      // 2. Render IDE-TC list
       renderIdeList();
 
-      // 3. Render charts
       const catLabels = Object.keys(activeData.categories);
       const catValues = catLabels.map(k => activeData.categories[k]);
       buildCategoryChart(catLabels, catValues);
@@ -1122,7 +1027,6 @@ ${getOperationalContextString()}`;
         ? `Categorías de chequeo de ${selectedInstructor.split(" ")[0]}`
         : "Distribución de categorías acumuladas";
 
-      // Dimension Fails Bar Chart
       const sortedDims = Object.entries(activeData.dimensionFailures)
                                .sort((a,b) => b[1] - a[1])
                                .slice(0, 6);
@@ -1130,14 +1034,10 @@ ${getOperationalContextString()}`;
       const dimVals = sortedDims.map(d => d[1]);
       buildDimensionChart(dimLabels, dimVals);
 
-      // 4. Render Table
       renderChecksTable("");
-
-      // 5. Update selected check details view if applicable
       updateDrilldownView();
     }
 
-    // Render IDE-TC row items
     function renderIdeList() {
       const container = document.getElementById("ideListContainer");
       container.innerHTML = "";
@@ -1152,7 +1052,6 @@ ${getOperationalContextString()}`;
             : "bg-slate-950/60 hover:bg-slate-900 border-slate-800/80 hover:border-slate-700"
         }`;
 
-        // Color helper for progress bar
         let barColor = "bg-emerald-500";
         if (inst.rate < 99) barColor = "bg-indigo-500";
         if (inst.rate < 97) barColor = "bg-amber-500";
@@ -1164,8 +1063,6 @@ ${getOperationalContextString()}`;
               <p class="font-bold text-xs text-white truncate" title="${inst.name}">${inst.name}</p>
             </div>
             <p class="text-[10px] text-slate-400 mt-1">${inst.role}</p>
-            
-            <!-- Mini bar chart of performance -->
             <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mt-2.5 border border-slate-800">
               <div class="h-full ${barColor}" style="width: ${inst.rate}%"></div>
             </div>
@@ -1192,14 +1089,12 @@ ${getOperationalContextString()}`;
       });
     }
 
-    // Render left-side explorer checks list
     function renderChecksTable(query) {
       const tbody = document.getElementById("checksTableBody");
       tbody.innerHTML = "";
 
       let list = activeData.chequeos;
 
-      // Filter by search query if any
       if (query.trim() !== "") {
         list = list.filter(c => 
           c.id.toLowerCase().includes(query) ||
@@ -1253,14 +1148,13 @@ ${getOperationalContextString()}`;
         tr.addEventListener("click", () => {
           selectedCheck = c;
           updateDrilldownView();
-          renderChecksTable(query); // redibujar para actualizar fila seleccionada
+          renderChecksTable(query);
         });
 
         tbody.appendChild(tr);
       });
     }
 
-    // Render Drilldown View: Dimensions (1st Layer) & Subdimensions (2nd Layer)
     function updateDrilldownView() {
       const emptyState = document.getElementById("drilldownEmptyState");
       const activeContent = document.getElementById("drilldownActiveContent");
@@ -1276,14 +1170,12 @@ ${getOperationalContextString()}`;
       emptyState.classList.add("hidden");
       activeContent.classList.remove("hidden");
 
-      // Set headers
       document.getElementById("drill_checkId").innerText = selectedCheck.id;
       document.getElementById("drill_checkCat").innerText = selectedCheck.categoria;
       document.getElementById("drill_checkEvaluado").innerText = selectedCheck.evaluado;
       document.getElementById("drill_checkFecha").innerText = selectedCheck.fecha;
       document.getElementById("drill_checkIde").innerText = selectedCheck.ideTC;
 
-      // Handle custom check badge on Tab Headers
       const badge = document.getElementById("selectedCheckBadge");
       const isSatis = selectedCheck.resultadoFinal === "SATISFACTORIO";
       badge.className = `px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
@@ -1294,19 +1186,15 @@ ${getOperationalContextString()}`;
       badge.innerText = `Resultado: ${selectedCheck.resultadoFinal}`;
       badge.classList.remove("hidden");
 
-      // Show/Hide Plan Correctivo AI action button depending on check status
       const aiBtn = document.getElementById("aiPlanBtn");
-      // Si posee fallas específicas o es insatisfactorio, activamos el destaque
       if (!isSatis) {
         aiBtn.className = "mt-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-[10px] font-bold text-white px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md shadow-indigo-950/50 transition-all border border-indigo-500 animate-pulse";
       } else {
         aiBtn.className = "mt-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[10px] text-slate-300 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all";
       }
 
-      // Clean container
       container.innerHTML = "";
 
-      // Loop through first layer: Dimensiones
       const dimensionsMap = selectedCheck.dimensiones || {};
       const dimensionsNames = Object.keys(dimensionsMap);
 
@@ -1322,7 +1210,6 @@ ${getOperationalContextString()}`;
       dimensionsNames.forEach((dimName, index) => {
         const subDims = dimensionsMap[dimName] || [];
         
-        // Analyze subdimension results to set the Dimension header indicator
         let hasFail = false;
         let hasWarning = false;
         
@@ -1332,7 +1219,6 @@ ${getOperationalContextString()}`;
           if (res.includes("OBSERVACION")) hasWarning = true;
         });
 
-        // Set Dimension Status Badge
         let dimStatusBadge = "";
         if (hasFail) {
           dimStatusBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-rose-950/70 border border-rose-800 text-rose-400 flex items-center gap-1"><i data-lucide="x-circle" class="w-3 h-3"></i> Falla Crítica</span>`;
@@ -1342,12 +1228,10 @@ ${getOperationalContextString()}`;
           dimStatusBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-900 border border-slate-800 text-slate-400 flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i> Conforme</span>`;
         }
 
-        // Create Accordion Container
         const accordion = document.createElement("div");
         accordion.className = "bg-slate-950/40 border border-slate-800 rounded-xl overflow-hidden";
         
-        // Accordion Header
-        const isOpenByDefault = index === 0; // Abre el primero por defecto
+        const isOpenByDefault = index === 0;
         
         const headerId = `accordion-h-${index}`;
         const contentId = `accordion-c-${index}`;
@@ -1364,15 +1248,11 @@ ${getOperationalContextString()}`;
             <i data-lucide="chevron-down" id="arrow-${index}" class="w-4 h-4 text-slate-400 transform transition-transform duration-200 ${isOpenByDefault ? 'rotate-180' : ''}"></i>
           </button>
           
-          <!-- Accordion content (Second Capa: Sub-dimensiones) -->
-          <div id="${contentId}" class="${isOpenByDefault ? 'block' : 'hidden'} border-t border-slate-800/60 bg-slate-950/80 p-3.5 space-y-2">
-            <!-- Subdimension items will go here -->
-          </div>
+          <div id="${contentId}" class="${isOpenByDefault ? 'block' : 'hidden'} border-t border-slate-800/60 bg-slate-950/80 p-3.5 space-y-2"></div>
         `;
 
         container.appendChild(accordion);
 
-        // Populate Sub-dimensions (Second Capa)
         const contentBox = document.getElementById(contentId);
         
         subDims.forEach(sub => {
@@ -1399,7 +1279,6 @@ ${getOperationalContextString()}`;
           contentBox.appendChild(subRow);
         });
 
-        // Setup open/close trigger toggle
         document.getElementById(headerId).addEventListener("click", () => {
           const content = document.getElementById(contentId);
           const arrow = document.getElementById(`arrow-${index}`);
@@ -1420,7 +1299,6 @@ ${getOperationalContextString()}`;
       lucide.createIcons();
     }
 
-    // Dynamic Filter Engine (Simulation with static data if Excel is not uploaded)
     function applyFiltersAndRebuild() {
       if (!parsedExcelData) {
         simulateFiltersWithPreloaded();
@@ -1429,15 +1307,35 @@ ${getOperationalContextString()}`;
       processRawRows(parsedExcelData);
     }
 
-    // Multi-dimensional data scaler for interactive simulation with realistic ratios
     function simulateFiltersWithPreloaded() {
       let working = JSON.parse(JSON.stringify(defaultData));
 
-      // 1. Year Filter
+      // 1. Filtro por Resultado de Evaluación (Satis / Insatis)
+      if (currentFilters.result !== "ALL") {
+        const res = currentFilters.result;
+        working.chequeos = working.chequeos.filter(c => c.resultadoFinal.toUpperCase() === res);
+
+        // Escalamos los KPIs de instructores simuladamente
+        if (res === "SATISFACTORIO") {
+          working.instructors.forEach(i => {
+            i.count = i.satisf;
+            i.insat = 0;
+            i.rate = 100;
+          });
+          working.dimensionFailures = {};
+        } else {
+          working.instructors.forEach(i => {
+            i.count = i.insat;
+            i.satisf = 0;
+            i.rate = 0;
+          });
+        }
+      }
+
+      // 2. Year Filter
       if (currentFilters.year !== "ALL") {
         const yearInt = parseInt(currentFilters.year);
-        // Scale evaluations down based on average year distribution in aviation
-        let ratio = 0.18; // Default scale for single year
+        let ratio = 0.18;
         if (currentFilters.year === "2024") ratio = 0.23;
         if (currentFilters.year === "2025") ratio = 0.20;
 
@@ -1445,7 +1343,7 @@ ${getOperationalContextString()}`;
           i.count = Math.max(12, Math.round(i.count * ratio));
           i.insat = Math.max(0, Math.round(i.insat * ratio));
           i.satisf = i.count - i.insat;
-          i.rate = (i.satisf / i.count) * 100;
+          i.rate = i.count > 0 ? (i.satisf / i.count) * 100 : 100;
         });
 
         Object.keys(working.categories).forEach(cat => {
@@ -1459,10 +1357,10 @@ ${getOperationalContextString()}`;
         working.chequeos = working.chequeos.filter(c => c.anio === yearInt);
       }
 
-      // 2. Company Filter
+      // 3. Company Filter
       if (currentFilters.company !== "ALL") {
         const comp = currentFilters.company;
-        let ratio = 0.85; // LATAM has majority
+        let ratio = 0.85;
         if (comp === "SKY") ratio = 0.10;
         if (comp === "JETSMART") ratio = 0.04;
         if (comp === "STAR") ratio = 0.01;
@@ -1485,7 +1383,7 @@ ${getOperationalContextString()}`;
         working.chequeos = working.chequeos.filter(c => c.empresa.toUpperCase().includes(comp));
       }
 
-      // 3. Category Filter
+      // 4. Category Filter
       if (currentFilters.category !== "ALL") {
         const cat = currentFilters.category;
         const totalCatCount = working.categories[cat] || 1;
@@ -1499,7 +1397,6 @@ ${getOperationalContextString()}`;
           i.rate = i.count > 0 ? (i.satisf / i.count) * 100 : 100;
         });
 
-        // Pivot Category chart values
         const temp = {};
         temp[cat] = totalCatCount;
         working.categories = temp;
@@ -1507,11 +1404,10 @@ ${getOperationalContextString()}`;
         working.chequeos = working.chequeos.filter(c => c.categoria === cat);
       }
 
-      // 4. Instructor Selector (Click in list)
+      // 5. Instructor Selector
       if (selectedInstructor) {
         working.instructors = working.instructors.filter(i => i.name === selectedInstructor);
         
-        // Scale Categories to this instructor only
         const instObj = defaultData.instructors.find(i => i.name === selectedInstructor);
         const instRatio = instObj ? instObj.count / 12698 : 0.5;
 
@@ -1526,7 +1422,6 @@ ${getOperationalContextString()}`;
         working.chequeos = working.chequeos.filter(c => c.ideTC === selectedInstructor);
       }
 
-      // Check selected check persistence
       if (selectedCheck) {
         const exists = working.chequeos.some(c => c.id === selectedCheck.id);
         if (!exists) selectedCheck = working.chequeos[0] || null;
@@ -1538,7 +1433,6 @@ ${getOperationalContextString()}`;
       renderAll();
     }
 
-    // --- REAL EXCEL FILE HANDLING (SheetJS Integration) ---
     function handleExcelUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -1556,17 +1450,13 @@ ${getOperationalContextString()}`;
             const binary = evt.target.result;
             const workbook = XLSX.read(binary, { type: 'binary' });
             
-            // Primary sheet parser
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
             
             parsedExcelData = XLSX.utils.sheet_to_json(worksheet);
-            console.log("Sheet parsed successfully. Row count: ", parsedExcelData.length);
             
-            // Aggregate hierarchy and render
             processRawRows(parsedExcelData);
             
-            // Adjust status bar UI
             document.getElementById("statusText").innerText = "Base de datos cargada localmente";
             document.getElementById("statusIndicator").className = "flex items-center gap-2 text-xs bg-emerald-950/40 border border-emerald-800 text-emerald-300 px-3.5 py-2 rounded-xl";
             
@@ -1587,19 +1477,15 @@ ${getOperationalContextString()}`;
       reader.readAsBinaryString(file);
     }
 
-    // The core parser that groups row structures into clean checks
     function processRawRows(rows) {
       if (!rows || rows.length === 0) return;
 
-      // 1. First-pass global structures
       const allUniqueInstructorsMap = new Map();
       const globalCategoriesCount = {};
       const globalDimensionFailures = {};
       const checksMap = new Map();
 
-      // Row processing
       rows.forEach(row => {
-        // Essential identifiers
         const checkId = row['NUM_GENERADO'] || 'S/N';
         const instructor = row['NOMBRE_IDE TC'] || row['INSPECTOR'] || 'INSTRUCTOR NO DEFINIDO';
         const fecha = row['FECHA_INSPECCION'] || row['FECHA_PROGRAMACION'] || 'N/D';
@@ -1608,31 +1494,29 @@ ${getOperationalContextString()}`;
         const empresa = row['EMPRESA'] || 'OTRO';
         const evaluado = row['EVALUADO'] || 'N/D';
         const anio = parseInt(row['AÑO']) || 2024;
-        const mes = (row['MES'] || 'ENERO').toUpperCase();
 
         const dimName = row['DIMENSION'] || 'OTRAS DIMENSIONES';
         const subDimName = row['SUB_DIMENSION'] || 'SUB_DIMENSIÓN NO ESPECIFICADA';
         const subDimRes = row['RESULTADO EVALUACIÓN X SUB_DIMENSIÓN'] || 'NO OBSERVADO';
 
-        // Filters evaluation bypass
         let passesYear = currentFilters.year === "ALL" || anio === parseInt(currentFilters.year);
         
         let passesCompany = true;
         if (currentFilters.company !== "ALL") {
-          const empUpper = empresa.toUpperCase();
-          passesCompany = empUpper.includes(currentFilters.company);
+          passesCompany = empresa.toUpperCase().includes(currentFilters.company);
         }
 
         let passesCategory = currentFilters.category === "ALL" || categoria === currentFilters.category;
+
+        // Nuevo validador de resultados de evaluación
+        let passesResult = currentFilters.result === "ALL" || resFinal.toUpperCase() === currentFilters.result;
 
         let passesInstructor = true;
         if (selectedInstructor) {
           passesInstructor = instructor === selectedInstructor;
         }
 
-        // Apply filters dynamically to structure build
-        if (passesYear && passesCompany && passesCategory && passesInstructor) {
-          // Initialize check object
+        if (passesYear && passesCompany && passesCategory && passesResult && passesInstructor) {
           if (!checksMap.has(checkId)) {
             checksMap.set(checkId, {
               id: checkId,
@@ -1646,10 +1530,8 @@ ${getOperationalContextString()}`;
               dimensiones: {}
             });
 
-            // Count categories distribution based on unique checks
             globalCategoriesCount[categoria] = (globalCategoriesCount[categoria] || 0) + 1;
 
-            // Track Instructor performance based on unique evaluations
             if (!allUniqueInstructorsMap.has(instructor)) {
               allUniqueInstructorsMap.set(instructor, { name: instructor, count: 0, satisf: 0, insat: 0 });
             }
@@ -1663,13 +1545,11 @@ ${getOperationalContextString()}`;
             }
           }
 
-          // Append Dimension & Subdimension nodes (Capas 1 y 2)
           const currentCheck = checksMap.get(checkId);
           if (!currentCheck.dimensiones[dimName]) {
             currentCheck.dimensiones[dimName] = [];
           }
 
-          // Don't add duplicate subdimensions in the same check
           const subexists = currentCheck.dimensiones[dimName].some(s => s.subdimension === subDimName);
           if (!subexists) {
             currentCheck.dimensiones[dimName].push({
@@ -1677,7 +1557,6 @@ ${getOperationalContextString()}`;
               resultado: subDimRes
             });
 
-            // Quantify dimension issues
             if (subDimRes.includes("INSATISFACTORIO") || subDimRes.includes("OBSERVACION")) {
               globalDimensionFailures[dimName] = (globalDimensionFailures[dimName] || 0) + 1;
             }
@@ -1685,7 +1564,6 @@ ${getOperationalContextString()}`;
         }
       });
 
-      // Transform maps back to standard dashboard array properties
       const finishedInstructors = [];
       allUniqueInstructorsMap.forEach((val) => {
         const rate = val.count > 0 ? (val.satisf / val.count) * 100 : 100;
@@ -1703,12 +1581,10 @@ ${getOperationalContextString()}`;
         });
       });
 
-      // Sorted by quantity of checks
       finishedInstructors.sort((a,b) => b.count - a.count);
 
       const finishedChequeos = Array.from(checksMap.values());
 
-      // If active selection no longer exists, clear it
       if (selectedCheck) {
         const match = finishedChequeos.find(c => c.id === selectedCheck.id);
         selectedCheck = match || finishedChequeos[0] || null;
@@ -1716,7 +1592,6 @@ ${getOperationalContextString()}`;
         selectedCheck = finishedChequeos[0] || null;
       }
 
-      // Rebuild state
       activeData = {
         instructors: finishedInstructors,
         categories: globalCategoriesCount,
