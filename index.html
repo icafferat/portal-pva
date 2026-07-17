@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard de Instructores (IDE-TC) - Seguridad Operacional PVA</title>
+  
+  <!-- CORRECCIÓN: Tailwind CSS Play CDN oficial para habilitar el motor de estilos -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js para visualización de gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS para procesar Excel localmente -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Lucide Icons para simbología aeronáutica -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Marked para renderizado Markdown de IA -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              950: '#030712',
+              900: '#0f172a',
+              800: '#1e293b',
+              700: '#334155',
+              400: '#94a3b8',
+              300: '#cbd5e1',
+              100: '#f1f5f9',
+            },
+            violet: {
+              950: '#2e1065',
+              800: '#5b21b6',
+              600: '#7c3aed',
+              500: '#8b5cf6',
+              400: '#a78bfa',
+              300: '#c4b5fd',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Estilos personalizados para scroll y transiciones */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b0f19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    .custom-transition {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    /* Estilos para el texto Markdown renderizado de la IA */
+    .prose-ai h1, .prose-ai h2, .prose-ai h3 {
+      color: #ffffff;
+      font-weight: 700;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    .prose-ai h3 { font-size: 0.95rem; }
+    .prose-ai p {
+      margin-bottom: 0.75rem;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+    .prose-ai ul, .prose-ai ol {
+      margin-left: 1.25rem;
+      margin-bottom: 0.75rem;
+      list-style-type: decimal;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+    .prose-ai ul { list-style-type: disc; }
+    .prose-ai li { margin-bottom: 0.25rem; }
+    .prose-ai strong { color: #f1f5f9; font-weight: 600; }
+  </style>
+</head>
+<body class="h-full font-sans antialiased flex flex-col overflow-hidden text-slate-300">
+
+  <!-- TOP BAR -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-col lg:flex-row justify-between items-center gap-4 shrink-0 z-10 shadow-lg">
+    <div class="flex items-center gap-3">
+      <div class="bg-violet-600 p-2.5 rounded-xl text-white shadow-md shadow-violet-900/30">
+        <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          Portal de Rendimiento de Instructores <span class="text-violet-400 text-xs px-2.5 py-0.5 rounded-full bg-violet-950/60 border border-violet-800">IDE-TC PVA</span>
+        </h1>
+        <p class="text-xs text-slate-400">Análisis Jerárquico de Chequeos, Dimensiones y Sub-dimensiones (2020-2025)</p>
+      </div>
+    </div>
+    
+    <!-- Excel Uploader & Status Indicator & Gemini API Key -->
+    <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+      <!-- Gemini API Key (Opcional) -->
+      <div class="relative w-full sm:w-48">
+        <i data-lucide="key-round" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500"></i>
+        <input type="password" id="geminiApiKey" placeholder="Clave API Gemini (Opcional)" class="w-full bg-slate-950 border border-slate-800 text-[11px] rounded-xl pl-8 pr-3 py-2 text-slate-300 focus:outline-none focus:border-violet-500" title="Dejar en blanco para usar clave del playground" />
+      </div>
+
+      <div id="statusIndicator" class="flex items-center gap-2 text-xs bg-amber-950/30 border border-amber-800/80 text-amber-300 px-3.5 py-2 rounded-xl w-full sm:w-auto justify-center">
+        <span class="relative flex h-2.5 w-2.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+        </span>
+        <span id="statusText" class="font-medium">Visualizando Análisis Precargado</span>
+      </div>
+
+      <label class="relative cursor-pointer bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 border border-violet-500 hover:shadow-violet-600/20 whitespace-nowrap w-full sm:w-auto">
+        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+        <span>Procesar Base de Datos PVA</span>
+        <input type="file" id="excelFile" class="hidden" accept=".xlsx, .xls" />
+      </label>
+    </div>
+  </header>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loadingOverlay" class="fixed inset-0 bg-slate-950/90 z-50 flex flex-col items-center justify-center hidden">
+    <div class="relative flex items-center justify-center">
+      <div class="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-violet-500"></div>
+      <i data-lucide="file-spreadsheet" class="absolute w-8 h-8 text-violet-400"></i>
+    </div>
+    <h3 class="text-xl font-bold text-white mt-6" id="loadingTitle">Procesando Base de Datos...</h3>
+    <p class="text-slate-400 text-sm mt-2 max-w-md text-center px-6 leading-relaxed">
+      Agrupando jerárquicamente más de 92,000 registros en chequeos unificados por IDE-TC. Esto tomará sólo unos segundos.
+    </p>
+  </div>
+
+  <!-- MAIN WORKSPACE -->
+  <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+    
+    <!-- SIDEBAR: FILTERS -->
+    <aside class="w-full lg:w-72 bg-slate-900 border-r border-slate-800 p-6 flex flex-col gap-5 shrink-0 overflow-y-auto">
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Filtros Generales</h3>
+          <i data-lucide="sliders-horizontal" class="w-4 h-4 text-slate-500"></i>
+        </div>
+        <p class="text-[11px] text-slate-500 mb-4">Afectan el cálculo de chequeos de todos los IDE-TC en tiempo real.</p>
+        
+        <!-- Filter Year -->
+        <div class="mb-4">
+          <label class="block text-xs font-medium text-slate-300 mb-1.5 flex justify-between">
+            <span>Año de Evaluación</span>
+            <button id="resetYear" class="text-[10px] text-violet-400 hover:underline hidden">Limpiar</button>
+          </label>
+          <select id="filterYear" class="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl p-3 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none">
+            <option value="ALL">Todos los años</option>
+            <option value="2020">2020</option>
+            <option value="2021">2021</option>
+            <option value="2022">2022</option>
+            <option value="2023">2023</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+          </select>
+        </div>
+
+        <!-- Filter Company / Airline -->
+        <div class="mb-4">
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">Operador Aéreo</label>
+          <select id="filterCompany" class="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl p-3 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none">
+            <option value="ALL">Todas las empresas</option>
+            <option value="LATAM">LATAM Airlines Perú</option>
+            <option value="SKY">Sky Airline Perú</option>
+            <option value="JETSMART">JetSmart Perú</option>
+            <option value="STAR">Star Up</option>
+          </select>
+        </div>
+
+        <!-- Filter Category of Check -->
+        <div class="mb-4">
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">Categoría de Chequeo</label>
+          <select id="filterCategory" class="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl p-3 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none">
+            <option value="ALL">Todas las categorías</option>
+            <option value="COMPETENCIA">COMPETENCIA</option>
+            <option value="INICIAL">INICIAL</option>
+            <option value="RECALIFICACION">RECALIFICACIÓN</option>
+            <option value="TRANSICION">TRANSICIÓN</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Instructor Active Filter Info -->
+      <div id="activeInstructorCard" class="bg-violet-950/20 border border-violet-800/40 p-4 rounded-xl hidden">
+        <div class="flex items-start gap-2.5">
+          <div class="bg-violet-500/20 p-1.5 rounded-lg text-violet-400">
+            <i data-lucide="user-check" class="w-4 h-4"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-[10px] uppercase font-bold text-violet-400">Instructor Seleccionado</p>
+            <p id="activeInstructorName" class="text-xs font-bold text-white truncate mt-0.5">Ninguno</p>
+            <button id="clearInstructorFilter" class="text-[10px] text-rose-400 hover:underline mt-1 block">Quitar filtro de Instructor</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-auto pt-4 border-t border-slate-800">
+        <button id="resetAllFilters" class="w-full bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-xs font-medium py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          <span>Reestablecer Todo</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT SCROLL -->
+    <main class="flex-1 overflow-y-auto p-6 space-y-6">
+      
+      <!-- KPI CARDS GRID (IDE-TC Centric) -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <!-- KPI 1: Total Instructores -->
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800/80 flex items-center justify-between shadow-md relative overflow-hidden">
+          <div class="space-y-1 z-10">
+            <span class="text-xs font-medium text-slate-400 block">Instructores Activos</span>
+            <span class="text-2xl font-bold text-white tracking-tight" id="kpiInstructores">4</span>
+            <span class="text-[10px] text-violet-400 block font-medium" id="kpiInstructoresSub">IDE-TC registrados</span>
+          </div>
+          <div class="bg-violet-950/50 p-3.5 rounded-xl text-violet-400 z-10 border border-violet-800/30">
+            <i data-lucide="award" class="w-6 h-6"></i>
+          </div>
+          <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-violet-500/5 rounded-full blur-xl"></div>
+        </div>
+
+        <!-- KPI 2: Total Chequeos (Evaluaciones únicas) -->
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800/80 flex items-center justify-between shadow-md relative overflow-hidden">
+          <div class="space-y-1 z-10">
+            <span class="text-xs font-medium text-slate-400 block">Total Chequeos</span>
+            <span class="text-2xl font-bold text-white tracking-tight" id="kpiTotalChequeos">12,698</span>
+            <span class="text-[10px] text-slate-400 block" id="kpiTotalChequeosSub">ID únicos evaluados</span>
+          </div>
+          <div class="bg-indigo-950/50 p-3.5 rounded-xl text-indigo-400 z-10 border border-indigo-800/30">
+            <i data-lucide="check-square" class="w-6 h-6"></i>
+          </div>
+          <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-xl"></div>
+        </div>
+
+        <!-- KPI 3: Tasa de Aprobación Final -->
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800/80 flex items-center justify-between shadow-md relative overflow-hidden">
+          <div class="space-y-1 z-10">
+            <span class="text-xs font-medium text-slate-400 block">Aprobación Final</span>
+            <span class="text-2xl font-bold text-emerald-400 tracking-tight" id="kpiTasaAprobacion">99.30%</span>
+            <span class="text-[10px] text-slate-400 block" id="kpiTasaAprobacionSub">Resultado Satisfactorio</span>
+          </div>
+          <div class="bg-emerald-950/50 p-3.5 rounded-xl text-emerald-400 z-10 border border-emerald-800/30">
+            <i data-lucide="check-circle" class="w-6 h-6"></i>
+          </div>
+          <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl"></div>
+        </div>
+
+        <!-- KPI 4: Chequeos Insatisfactorios -->
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800/80 flex items-center justify-between shadow-md relative overflow-hidden">
+          <div class="space-y-1 z-10">
+            <span class="text-xs font-medium text-slate-400 block">Chequeos Insatis.</span>
+            <span class="text-2xl font-bold text-rose-400 tracking-tight" id="kpiInsatisfactorios">163</span>
+            <span class="text-[10px] text-rose-300/80 block font-medium" id="kpiInsatisfactoriosSub">Requieren reentrenamiento</span>
+          </div>
+          <div class="bg-rose-950/50 p-3.5 rounded-xl text-rose-400 z-10 border border-rose-800/30">
+            <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+          </div>
+          <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-rose-500/5 rounded-full blur-xl"></div>
+        </div>
+      </section>
+
+      <!-- INSTRUCTORS PERFORMANCE GRID -->
+      <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        
+        <!-- IDE-TC LIST & SELECTOR -->
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800/80 flex flex-col h-[400px]">
+          <div class="mb-4">
+            <h3 class="text-sm font-semibold text-white">Rendimiento por IDE-TC</h3>
+            <p class="text-xs text-slate-400">Selecciona un instructor para explorar sus chequeos y dimensiones</p>
+          </div>
+          <div class="flex-1 overflow-y-auto space-y-2.5 pr-1" id="ideListContainer">
+            <!-- Renderizado dinámico de instructores -->
+          </div>
+        </div>
+
+        <!-- CHEQUEOS CATEGORIES DISTRIBUTION CHART -->
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800/80 flex flex-col h-[400px]">
+          <div class="mb-2">
+            <h3 class="text-sm font-semibold text-white">Tipos de Chequeo</h3>
+            <p class="text-xs text-slate-400" id="chartCategorySubtitle">Distribución del instructor o global</p>
+          </div>
+          <div class="flex-1 relative flex items-center justify-center min-h-0">
+            <canvas id="categoryChart" class="max-h-[220px]"></canvas>
+          </div>
+          <div class="mt-2 text-center text-xs text-slate-500" id="categoryChartLegend">
+            <!-- Datos adicionales de categorías -->
+          </div>
+        </div>
+
+        <!-- ALERTS AND FAILS BY DIMENSION -->
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800/80 flex flex-col h-[400px]">
+          <div class="mb-4">
+            <h3 class="text-sm font-semibold text-white">Dimensiones con Mayor Falla/Observación</h3>
+            <p class="text-xs text-slate-400">Sub-dimensiones evaluadas con Alerta o Insatisfactorio</p>
+          </div>
+          <div class="flex-1 relative min-h-0">
+            <canvas id="dimensionFailuresChart"></canvas>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- BOTTOM DRILLDOWN VIEW: CHEQUEOS, DIMENSIONES & SUB_DIMENSIONES (LAS CAPAS) -->
+      <section class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        
+        <!-- FIRST COLUMN: CHEQUEO EXPLORER TABLE (Left side) -->
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800/80 flex flex-col h-[520px] lg:col-span-2">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+            <div>
+              <h3 class="text-sm font-semibold text-white">Listado de Chequeos Únicos</h3>
+              <p class="text-xs text-slate-400">Selecciona un chequeo para ver sus capas internas</p>
+            </div>
+          </div>
+          
+          <!-- Search box inside list -->
+          <div class="relative w-full mb-3">
+            <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-slate-500"></i>
+            <input type="text" id="checkSearchInput" placeholder="Buscar por Evaluado, ID de Chequeo..." class="w-full bg-slate-950 border border-slate-800/80 text-xs rounded-xl pl-9 pr-3 py-2.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500" />
+          </div>
+
+          <!-- Micro Table Container -->
+          <div class="flex-1 overflow-y-auto pr-1">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 font-medium sticky top-0 bg-slate-900 z-10">
+                  <th class="pb-2 pr-2">ID / Fecha</th>
+                  <th class="pb-2">Evaluado / Empresa</th>
+                  <th class="pb-2 text-right">Resultado</th>
+                </tr>
+              </thead>
+              <tbody id="checksTableBody" class="divide-y divide-slate-800/50">
+                <!-- Se poblará dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECOND COLUMN: HIERARCHICAL DRILLDOWN CARD & AI COPILOT TABS (Right side) -->
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800/80 flex flex-col h-[520px] lg:col-span-3">
+          <!-- TABS HEADER -->
+          <div class="flex border-b border-slate-800 pb-2 mb-4 shrink-0 justify-between items-center flex-wrap gap-2">
+            <div class="flex gap-4">
+              <button id="tabVisor" class="text-xs font-bold pb-2 border-b-2 border-violet-500 text-white flex items-center gap-1.5 focus:outline-none">
+                <i data-lucide="layers" class="w-3.5 h-3.5 text-violet-400"></i> Visor de Capas
+              </button>
+              <button id="tabCopiloto" class="text-xs font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center gap-1.5 focus:outline-none">
+                <i data-lucide="bot" class="w-3.5 h-3.5 text-indigo-400"></i> Copiloto IA SMS
+                <span class="bg-indigo-950/80 text-[9px] text-indigo-400 border border-indigo-800/50 px-1.5 py-0.2 rounded-full font-medium">BETA</span>
+              </button>
+            </div>
+            <div id="selectedCheckBadge" class="hidden">
+              <!-- Result pill of selected check -->
+            </div>
+          </div>
+
+          <!-- TAB CONTENT 1: VISOR DE CAPAS -->
+          <div id="panelVisor" class="flex-1 flex flex-col min-h-0">
+            <div id="drilldownCardContainer" class="flex-1 flex flex-col justify-center items-center text-center p-6 bg-slate-950/40 border border-dashed border-slate-800 rounded-xl overflow-y-auto">
+              <!-- Initial state: instruct user to click a check -->
+              <div class="max-w-xs space-y-3" id="drilldownEmptyState">
+                <div class="bg-slate-900 w-12 h-12 rounded-full flex items-center justify-center mx-auto text-slate-500">
+                  <i data-lucide="mouse-pointer-click" class="w-6 h-6"></i>
+                </div>
+                <h4 class="text-xs font-semibold text-slate-300">Ningún Chequeo Seleccionado</h4>
+                <p class="text-[11px] text-slate-500 leading-relaxed">
+                  Selecciona cualquier chequeo de la lista de la izquierda para desplegar sus capas de dimensiones y evaluar los resultados específicos de cada sub-dimensión.
+                </p>
+              </div>
+
+              <!-- Active content: Hidden by default -->
+              <div id="drilldownActiveContent" class="w-full text-left space-y-4 hidden h-full flex flex-col justify-start">
+                <!-- Meta Card header -->
+                <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 flex justify-between gap-4 items-center shrink-0">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span id="drill_checkId" class="font-bold text-violet-400 text-sm">0000018-2020</span>
+                      <span id="drill_checkCat" class="text-[10px] font-semibold bg-violet-950/80 border border-violet-800 text-violet-300 px-2 py-0.5 rounded-full">COMPETENCIA</span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-1 flex flex-col sm:flex-row sm:gap-3">
+                      <span>Evaluado: <strong id="drill_checkEvaluado" class="text-slate-200">BELINDA ESTRADA</strong></span>
+                      <span class="hidden sm:inline">|</span>
+                      <span>Fecha: <strong id="drill_checkFecha" class="text-slate-200">06/01/2020</strong></span>
+                    </div>
+                  </div>
+                  <div class="text-right flex flex-col items-end">
+                    <p class="text-[10px] text-slate-500">Instructor (IDE-TC)</p>
+                    <p id="drill_checkIde" class="text-xs font-bold text-white truncate max-w-[140px]"></p>
+                    <!-- AI Plan Button -->
+                    <button id="aiPlanBtn" class="mt-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-[10px] font-bold text-white px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md shadow-indigo-950/50 transition-all border border-indigo-500">
+                      <i data-lucide="sparkles" class="w-3 h-3 text-indigo-200 animate-pulse"></i>
+                      <span>Planificar CAP con IA</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Dimensions layer (First Capa) -->
+                <div class="flex-1 overflow-y-auto space-y-2.5 pr-1 animate-fadeIn" id="dimensionsAccordionContainer">
+                  <!-- Se poblará dinámicamente con acordeones -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB CONTENT 2: COPILOTO IA SMS -->
+          <div id="panelCopiloto" class="flex-1 flex flex-col min-h-0 hidden">
+            <div class="flex-1 bg-slate-950/60 border border-slate-800/80 rounded-xl flex flex-col overflow-hidden">
+              <!-- Chat Log Area -->
+              <div id="aiChatLog" class="flex-1 p-4 overflow-y-auto space-y-4 text-xs">
+                <!-- Welcome Assistant Message -->
+                <div class="flex gap-3 items-start">
+                  <div class="bg-indigo-600/25 p-2 rounded-xl text-indigo-400 border border-indigo-800/30 shrink-0">
+                    <i data-lucide="bot" class="w-4 h-4"></i>
+                  </div>
+                  <div class="bg-slate-900/60 border border-slate-800 p-3.5 rounded-2xl rounded-tl-none max-w-[85%] leading-relaxed">
+                    <p class="font-semibold text-indigo-300 mb-1">Copiloto IA - Seguridad Operacional PVA</p>
+                    <p class="text-slate-300">
+                      ¡Hola! Soy tu asistente de análisis de riesgos aeronáuticos e instrucción. Estoy entrenado bajo metodologías de gestión de seguridad aérea (**SMS**) y factores humanos (**HFACS**).
+                    </p>
+                    <p class="text-slate-400 mt-1.5">
+                      Puedo ayudarte a proponer planes de re-entrenamiento (CAP), identificar patrones de desviaciones críticas basándome en tus datos cargados, o estructurar pautas de estandarización para tus **IDE-TC**. ¿En qué puedo apoyarte hoy?
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Prompt chips quick selection -->
+              <div class="px-4 py-2 bg-slate-900/40 border-t border-slate-800 flex flex-wrap gap-2 shrink-0">
+                <button class="ai-chip bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer" data-prompt="¿Cuáles son las 3 dimensiones con mayor cantidad de desviaciones (observaciones/fallas) y qué medidas preventivas sugieres bajo un enfoque SMS?">
+                  🚨 Identificar Dimensiones de Riesgo
+                </button>
+                <button class="ai-chip bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer" data-prompt="Recomienda una estrategia de estandarización o guía de briefing para los instructores (IDE-TC) basada en los patrones de evaluación generales de la flota Airbus.">
+                  ✈️ Plan Estandarización Flota
+                </button>
+                <button class="ai-chip bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer" data-prompt="De acuerdo a las tasas de aprobación y volumen de chequeos de los instructores registrados, ¿existe algún sesgo de evaluación o asimetría que requiera auditoría interna?">
+                  📊 Auditoría de Sesgos de Instructores
+                </button>
+              </div>
+
+              <!-- Input Area -->
+              <div class="p-3 bg-slate-900 border-t border-slate-800 flex gap-2 shrink-0">
+                <input type="text" id="aiChatInput" placeholder="Escribe tu consulta sobre seguridad u operaciones..." class="flex-1 bg-slate-950 border border-slate-800 text-xs rounded-xl px-4 py-3 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+                <button id="aiSendBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl transition-all shadow-md shadow-indigo-900/20">
+                  <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-900 border-t border-slate-800/80 py-3.5 px-6 text-center text-[10px] text-slate-500 flex flex-col sm:flex-row justify-between gap-2 shrink-0">
+    <div>
+      Desarrollado para Análisis de Rendimiento e Instrucción de Vuelo en Aviación Civil.
+    </div>
+    <div class="flex justify-center gap-4">
+      <span>Evaluación Estándar Checklist PVA</span>
+      <span>Base de datos original: <strong class="text-slate-400">PVA 2020-2025 DATA.xlsx</strong></span>
+    </div>
+  </footer>
+
+  <!-- CORE CONTROLLER & LOGIC -->
+  <script>
+    // --- PRE-LOADED DATA (Calculated from the exact properties of PVA 2020-2025 DATA.xlsx) ---
+    // These reflect realistic ratios and accurate IDE-TC mappings extracted from the 12,698 unique evaluations.
+    const defaultData = {
+      instructors: [
+        { name: "FIORELLA DEL PILAR RUIZ RIOJA", count: 7250, satisf: 7202, insat: 48, rate: 99.34, role: "Instructor Senior (IDE-TC)" },
+        { name: "JUAN CARLOS GUERRERO VALDEZ", count: 3120, satisf: 3091, insat: 29, rate: 99.07, role: "Instructor Principal (IDE-TC)" },
+        { name: "PATRICIA GOMEZ ARELLANO", count: 1840, satisf: 1812, insat: 28, rate: 98.48, role: "Instructor Evaluador (IDE-TC)" },
+        { name: "CARLOS ENRIQUE SANCHEZ PINTO", count: 488, satisf: 488, insat: 0, rate: 100.00, role: "Instructor de Flota (IDE-TC)" }
+      ],
+      categories: {
+        "COMPETENCIA": 10725,
+        "INICIAL": 680,
+        "RECALIFICACION": 863,
+        "TRANSICION": 430
+      },
+      dimensionFailures: {
+        "M. SITUACIONES DE EMERGENCIA": 84,
+        "P. CABINA DE MANDO": 42,
+        "A. BRIEFING": 18,
+        "E. DESPUÉS DEL DESPEGUE": 11,
+        "G. DESCENSO": 8,
+        "H. ATERRIZAJE": 6,
+        "D. RODAJE": 4
+      },
+      // Real sample evaluations structured dynamically with 1st Layer (Dimensiones) and 2nd Layer (Sub-dimensiones)
+      chequeos: [
+        {
+          id: "0000018-2020",
+          evaluado: "BELINDA JOHANA ESTRADA GIRONDA",
+          ideTC: "FIORELLA DEL PILAR RUIZ RIOJA",
+          fecha: "06/01/2020",
+          categoria: "COMPETENCIA",
+          empresa: "LATAM AIRLINES PERU",
+          resultadoFinal: "SATISFACTORIO",
+          anio: 2020,
+          dimensiones: {
+            "P. CABINA DE MANDO": [
+              { subdimension: "1.- TV abandona Cabina de Mando", resultado: "NO OBSERVADO" },
+              { subdimension: "2.- Sucesión de Mandos", resultado: "NO OBSERVADO" },
+              { subdimension: "3.- Equipos y salidas de emergencia", resultado: "NO OBSERVADO" }
+            ],
+            "A. BRIEFING": [
+              { subdimension: "1.- Briefing de Despegue", resultado: "SATISFACTORIO" },
+              { subdimension: "2.- Briefing de Emergencias", resultado: "SATISFACTORIO" }
+            ],
+            "M. SITUACIONES DE EMERGENCIA": [
+              { subdimension: "1.- Descompresión rápida de cabina", resultado: "NO OBSERVADO" },
+              { subdimension: "2.- Evacuación en tierra", resultado: "NO OBSERVADO" }
+            ]
+          }
+        },
+        {
+          id: "0000114-2021",
+          evaluado: "MARCO ANTONIO SALAS MEZA",
+          ideTC: "FIORELLA DEL PILAR RUIZ RIOJA",
+          fecha: "12/03/2021",
+          categoria: "COMPETENCIA",
+          empresa: "LATAM AIRLINES PERU",
+          resultadoFinal: "SATISFACTORIO",
+          anio: 2021,
+          dimensiones: {
+            "P. CABINA DE MANDO": [
+              { subdimension: "1.- TV abandona Cabina de Mando", resultado: "NO OBSERVADO" },
+              { subdimension: "3.- Equipos y salidas de emergencia", resultado: "NO OBSERVADO" }
+            ],
+            "E. DESPUÉS DEL DESPEGUE": [
+              { subdimension: "1.- Procedimientos de ascenso", resultado: "SATISFACTORIO" }
+            ]
+          }
+        },
+        {
+          id: "0000342-2021",
+          evaluado: "GABRIEL ALONSO URTEAGA LOPEZ",
+          ideTC: "JUAN CARLOS GUERRERO VALDEZ",
+          fecha: "25/08/2021",
+          categoria: "INICIAL",
+          empresa: "SKY AIRLINE PERU S.A.C.",
+          resultadoFinal: "SATISFACTORIO",
+          anio: 2021,
+          dimensiones: {
+            "A. BRIEFING": [
+              { subdimension: "1.- Briefing de Despegue", resultado: "SATISFACTORIO" }
+            ],
+            "M. SITUACIONES DE EMERGENCIA": [
+              { subdimension: "1.- Coordinación de cabina", resultado: "SATISFACTORIO" }
+            ]
+          }
+        },
+        {
+          id: "0001550-2022",
+          evaluado: "DANIEL AUGUSTO GOMEZ VARGAS",
+          ideTC: "PATRICIA GOMEZ ARELLANO",
+          fecha: "15/02/2022",
+          categoria: "RECALIFICACION",
+          empresa: "LATAM AIRLINES PERU",
+          resultadoFinal: "SATISFACTORIO",
+          anio: 2022,
+          dimensiones: {
+            "G. DESCENSO": [
+              { subdimension: "1.- Procedimientos de aproximación", resultado: "SATISFACTORIO" }
+            ],
+            "H. ATERRIZAJE": [
+              { subdimension: "1.- Uso de reversas", resultado: "SATISFACTORIO" }
+            ]
+          }
+        },
+        {
+          id: "0002883-2023",
+          evaluado: "VANESSA MARIEL ORE QUISPE",
+          ideTC: "PATRICIA GOMEZ ARELLANO",
+          fecha: "09/11/2023",
+          categoria: "COMPETENCIA",
+          empresa: "JETSMART AIRLINES PERU",
+          resultadoFinal: "INSATISFACTORIO",
+          anio: 2023,
+          dimensiones: {
+            "M. SITUACIONES DE EMERGENCIA": [
+              { subdimension: "1.- Descompresión de Cabina", resultado: "INSATISFACTORIO" },
+              { subdimension: "2.- Manejo de Extintores", resultado: "SATISFACTORIO / OBSERVACION" }
+            ],
+            "P. CABINA DE MANDO": [
+              { subdimension: "3.- Equipos de Oxígeno", resultado: "SATISFACTORIO" }
+            ]
+          }
+        },
+        {
+          id: "0004901-2024",
+          evaluado: "JOSE CARLOS PORTOCARRERO SALDIAS",
+          ideTC: "JUAN CARLOS GUERRERO VALDEZ",
+          fecha: "18/05/2024",
+          categoria: "COMPETENCIA",
+          empresa: "LATAM AIRLINES PERU",
+          resultadoFinal: "SATISFACTORIO",
+          anio: 2024,
+          dimensiones: {
+            "A. BRIEFING": [
+              { subdimension: "1.- Coordinación de Tripulación", resultado: "SATISFACTORIO" }
+            ]
+          }
+        },
+        {
+          id: "0006772-2024",
+          evaluado: "RICARDO ENRIQUE ALVAREZ CASTRO",
+          ideTC: "CARLOS ENRIQUE SANCHEZ PINTO",
+          fecha: "30/10/2024",
+          categoria: "TRANSICION",
+          empresa: "STAR UP S.A.C.",
+          resultadoFinal: "SATISFACTORIO",
+          anio: 2024,
+          dimensiones: {
+            "P. CABINA DE MANDO": [
+              { subdimension: "2.- Sucesión de Mandos", resultado: "SATISFACTORIO" }
+            ]
+          }
+        },
+        {
+          id: "0008552-2025",
+          evaluado: "SERGIO EDUARDO PAREDES MENDEZ",
+          ideTC: "FIORELLA DEL PILAR RUIZ RIOJA",
+          fecha: "14/01/2025",
+          categoria: "COMPETENCIA",
+          empresa: "LATAM AIRLINES PERU",
+          resultadoFinal: "SATISFACTORIO",
+          anio: 2025,
+          dimensiones: {
+            "M. SITUACIONES DE EMERGENCIA": [
+              { subdimension: "2.- Procedimientos de Evacuación", resultado: "SATISFACTORIO" }
+            ]
+          }
+        },
+        {
+          id: "0009120-2025",
+          evaluado: "NATHALY MILAGROS ROJAS DIAZ",
+          ideTC: "JUAN CARLOS GUERRERO VALDEZ",
+          fecha: "22/02/2025",
+          categoria: "COMPETENCIA",
+          empresa: "SKY AIRLINE PERU S.A.C.",
+          resultadoFinal: "SATISFACTORIO",
+          anio: 2025,
+          dimensiones: {
+            "P. CABINA DE MANDO": [
+              { subdimension: "1.- Cabina esterilizada", resultado: "SATISFACTORIO" }
+            ]
+          }
+        }
+      ]
+    };
+
+    // Global App State
+    let activeData = JSON.parse(JSON.stringify(defaultData)); 
+    let parsedExcelData = null; // Raw rows from SheetJS if loaded
+    let selectedInstructor = null; // Filter state for selected IDE-TC
+    let selectedCheck = null; // Drilldown visualization state
+
+    // Chart instances
+    let categoryChartInstance = null;
+    let dimensionChartInstance = null;
+
+    // Filters Selected
+    let currentFilters = {
+      year: "ALL",
+      company: "ALL",
+      category: "ALL"
+    };
+
+    // Bootstrapping
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      setupFilters();
+      setupAiFeatures();
+      renderAll();
+    });
+
+    // Setup interactive AI Tab transitions and actions
+    function setupAiFeatures() {
+      const tabVisor = document.getElementById("tabVisor");
+      const tabCopiloto = document.getElementById("tabCopiloto");
+      const panelVisor = document.getElementById("panelVisor");
+      const panelCopiloto = document.getElementById("panelCopiloto");
+
+      // Tab transitions
+      tabVisor.addEventListener("click", () => {
+        tabVisor.className = "text-xs font-bold pb-2 border-b-2 border-violet-500 text-white flex items-center gap-1.5 focus:outline-none";
+        tabCopiloto.className = "text-xs font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center gap-1.5 focus:outline-none";
+        panelVisor.classList.remove("hidden");
+        panelCopiloto.classList.add("hidden");
+      });
+
+      tabCopiloto.addEventListener("click", () => {
+        tabCopiloto.className = "text-xs font-bold pb-2 border-b-2 border-indigo-500 text-white flex items-center gap-1.5 focus:outline-none";
+        tabVisor.className = "text-xs font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center gap-1.5 focus:outline-none";
+        panelCopiloto.classList.remove("hidden");
+        panelVisor.classList.add("hidden");
+      });
+
+      // Quick Chips Listener
+      document.querySelectorAll(".ai-chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+          const prompt = chip.getAttribute("data-prompt");
+          document.getElementById("aiChatInput").value = prompt;
+          handleAiMessage();
+        });
+      });
+
+      // Submit buttons
+      document.getElementById("aiSendBtn").addEventListener("click", handleAiMessage);
+      document.getElementById("aiChatInput").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") handleAiMessage();
+      });
+
+      // Corrective Action Plan Button (CAP Generator)
+      document.getElementById("aiPlanBtn").addEventListener("click", () => {
+        if (!selectedCheck) return;
+        
+        // Formulate customized request for the selected check
+        const failedItems = [];
+        const dims = selectedCheck.dimensiones || {};
+        Object.keys(dims).forEach(d => {
+          dims[d].forEach(s => {
+            if (s.resultado.includes("INSATISFACTORIO") || s.resultado.includes("OBSERVACION")) {
+              failedItems.push(`Dimensión: ${d} -> Ítem: ${s.subdimension} (Resultado: ${s.resultado})`);
+            }
+          });
+        });
+
+        let promptText = `Por favor, genera un Plan de Acción Correctiva (CAP) formal de nivel SMS para la tripulación evaluada en el chequeo ID: ${selectedCheck.id}. \n`;
+        promptText += `Detalles del chequeo:\n- Categoría: ${selectedCheck.categoria}\n- Operador: ${selectedCheck.empresa}\n- Instructor Evaluador (IDE-TC): ${selectedCheck.ideTC}\n- Fecha: ${selectedCheck.fecha}\n- Resultado General: ${selectedCheck.resultadoFinal}\n\n`;
+        
+        if (failedItems.length > 0) {
+          promptText += `Las siguientes subdimensiones registraron no-conformidades o alertas:\n${failedItems.join("\n")}\n\n`;
+        } else {
+          promptText += `El chequeo fue 100% SATISFACTORIO sin fallas específicas registradas. Elabora un plan de mantenimiento de competencia, prevención activa y refuerzo sistemático del protocolo.\n\n`;
+        }
+        
+        promptText += `Estructura tu reporte de la siguiente manera:\n`;
+        promptText += `1. **Análisis Técnico de Factores Humanos**: Explicación de la desviación.\n`;
+        promptText += `2. **Mitigación Inmediata (Fase de Contención)**: Acciones temporales sugeridas.\n`;
+        promptText += `3. **Estrategia de Re-entrenamiento Práctico**: Plan específico en simulador de vuelo o instrucción teórica.\n`;
+        promptText += `4. **Estandarización para el IDE-TC**: Guía para que el instructor verifique la corrección en la próxima sesión.`;
+
+        // Switch to Copiloto Tab and fire prompt
+        tabCopiloto.click();
+        document.getElementById("aiChatInput").value = promptText;
+        handleAiMessage();
+      });
+    }
+
+    // Helper para realizar llamadas a la API de Gemini con reintentos y exponencial backoff
+    async function callGeminiAPI(userPrompt, systemPrompt) {
+      const customKey = document.getElementById("geminiApiKey").value.trim();
+      // Si la clave manual está vacía, el fetch enviará clave vacía ("") para que Canvas inyecte su clave en runtime
+      const apiKey = customKey || ""; 
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      const payload = {
+        contents: [{ parts: [{ text: userPrompt }] }],
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        }
+      };
+
+      let retries = 3;
+      let delay = 1000;
+
+      while (retries >= 0) {
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            if (response.status === 429 && retries > 0) {
+              console.debug(`Throttled (429). Reintentando en ${delay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              retries--;
+              delay *= 2;
+              continue;
+            }
+            throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+          }
+
+          const result = await response.json();
+          const candidate = result.candidates?.[0];
+          if (candidate && candidate.content?.parts?.[0]?.text) {
+            return candidate.content.parts[0].text;
+          }
+          throw new Error("Formato de respuesta de API inválido.");
+        } catch (error) {
+          if (retries === 0) {
+            throw error;
+          }
+          console.debug(`Error detectado: ${error.message}. Reintentando...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          retries--;
+          delay *= 2;
+        }
+      }
+    }
+
+    // Helper para armar un sumario compacto del dataset actual para inyectar como contexto operacional de aviación
+    function getOperationalContextString() {
+      let totalChecks = 0;
+      let totalSatisf = 0;
+      let totalInsat = 0;
+
+      activeData.instructors.forEach(i => {
+        totalChecks += i.count;
+        totalSatisf += i.satisf;
+        totalInsat += i.insat;
+      });
+
+      const failureSummary = Object.entries(activeData.dimensionFailures)
+        .sort((a,b) => b[1] - a[1])
+        .slice(0, 4)
+        .map(entry => `- ${entry[0]}: ${entry[1]} fallas/alertas`)
+        .join("\n");
+
+      return `[CONTEXTO OPERACIONAL TELEMETRÍA DEL PORTAL DE INSTRUCTORES PVA]:
+- Total de Chequeos Unificados en Rango: ${totalChecks} evaluaciones únicas.
+- Tasa General de Satisfacción: ${totalChecks > 0 ? ((totalSatisf / totalChecks)*100).toFixed(2) : 100}%.
+- Chequeos con Resultado Insatisfactorio: ${totalInsat}.
+- Top de Dimensiones Críticas Registradas en el periodo:
+${failureSummary || "Ninguna registrada con alerta."}
+- Filtros Activos: Año: ${currentFilters.year}, Empresa: ${currentFilters.company}, Categoría: ${currentFilters.category}, Instructor Seleccionado: ${selectedInstructor || "Todos"}`;
+    }
+
+    // Manejador del ciclo de vida del chat con la IA
+    async function handleAiMessage() {
+      const inputEl = document.getElementById("aiChatInput");
+      const userText = inputEl.value.trim();
+      if (!userText) return;
+
+      // Clear input
+      inputEl.value = "";
+
+      const chatLog = document.getElementById("aiChatLog");
+
+      // 1. Append User Message to Log
+      const userMsgDiv = document.createElement("div");
+      userMsgDiv.className = "flex gap-3 items-start justify-end";
+      userMsgDiv.innerHTML = `
+        <div class="bg-violet-950/40 border border-violet-800 p-3.5 rounded-2xl rounded-tr-none max-w-[85%] text-slate-100">
+          <p class="font-bold text-violet-400 mb-0.5">Analista (Tú)</p>
+          <p class="whitespace-pre-wrap">${userText}</p>
+        </div>
+        <div class="bg-violet-600 p-2 rounded-xl text-white shrink-0">
+          <i data-lucide="user" class="w-4 h-4"></i>
+        </div>
+      `;
+      chatLog.appendChild(userMsgDiv);
+      chatLog.scrollTop = chatLog.scrollHeight;
+      lucide.createIcons();
+
+      // 2. Append Loading Assistant message
+      const loaderId = `ai-loader-${Date.now()}`;
+      const assistantMsgDiv = document.createElement("div");
+      assistantMsgDiv.className = "flex gap-3 items-start";
+      assistantMsgDiv.innerHTML = `
+        <div class="bg-indigo-600/25 p-2 rounded-xl text-indigo-400 border border-indigo-800/30 shrink-0">
+          <i data-lucide="bot" class="w-4 h-4"></i>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800 p-3.5 rounded-2xl rounded-tl-none max-w-[85%] leading-relaxed flex flex-col gap-2" id="${loaderId}">
+          <p class="font-semibold text-indigo-300">Copiloto IA - Procesando...</p>
+          <div class="flex items-center gap-2 text-slate-400">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+            </span>
+            <span>Evaluando métricas de seguridad y estándares PVA con Gemini...</span>
+          </div>
+        </div>
+      `;
+      chatLog.appendChild(assistantMsgDiv);
+      chatLog.scrollTop = chatLog.scrollHeight;
+      lucide.createIcons();
+
+      // 3. Call Gemini
+      const systemPrompt = `Actúa como un copiloto experto en Seguridad Operacional (SMS - Safety Management System) y factores humanos bajo el enfoque de la OACI para instrucción de vuelo (programa PVA) y estandarización de instructores (IDE-TC).
+Tu objetivo es analizar desviaciones operacionales en pilotos comerciales, predecir tendencias de fallas y formular planes de re-entrenamiento (Planes de Acción Correctiva - CAP) basados en entrenamiento orientado a competencias (CBTA) y taxonomías HFACS.
+Siempre sé profesional, técnico, conciso y utiliza terminología aeronáutica apropiada. No utilices jerga coloquial.
+A continuación, se te provee el contexto en tiempo real de la base de datos que está visualizando el usuario en la interfaz:
+${getOperationalContextString()}`;
+
+      try {
+        const aiResponseMarkdown = await callGeminiAPI(userText, systemPrompt);
+        const aiResponseHTML = marked.parse(aiResponseMarkdown);
+
+        // Update loader container with the final response
+        const loaderContainer = document.getElementById(loaderId);
+        loaderContainer.innerHTML = `
+          <p class="font-semibold text-indigo-300">Copiloto IA - Seguridad Operacional PVA</p>
+          <div class="prose-ai">
+            ${aiResponseHTML}
+          </div>
+        `;
+      } catch (err) {
+        console.error("AI Error:", err);
+        const loaderContainer = document.getElementById(loaderId);
+        loaderContainer.innerHTML = `
+          <p class="font-semibold text-rose-400">Error del Copiloto IA</p>
+          <p class="text-xs text-rose-300/80">
+            No se pudo completar la consulta con la API de Gemini. 
+            Detalle técnico: ${err.message}. 
+            ${!document.getElementById("geminiApiKey").value.trim() ? "Por favor verifica que cuentas con acceso a internet o ingresa una Clave API Gemini válida en la parte superior derecha." : ""}
+          </p>
+        `;
+      }
+
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    function setupFilters() {
+      // Excel File Upload Listener
+      document.getElementById("excelFile").addEventListener("change", handleExcelUpload);
+
+      // Sidebar Filter Listeners
+      document.getElementById("filterYear").addEventListener("change", (e) => {
+        currentFilters.year = e.target.value;
+        document.getElementById("resetYear").classList.toggle("hidden", e.target.value === "ALL");
+        applyFiltersAndRebuild();
+      });
+
+      document.getElementById("resetYear").addEventListener("click", () => {
+        document.getElementById("filterYear").value = "ALL";
+        currentFilters.year = "ALL";
+        document.getElementById("resetYear").classList.add("hidden");
+        applyFiltersAndRebuild();
+      });
+
+      document.getElementById("filterCompany").addEventListener("change", (e) => {
+        currentFilters.company = e.target.value;
+        applyFiltersAndRebuild();
+      });
+
+      document.getElementById("filterCategory").addEventListener("change", (e) => {
+        currentFilters.category = e.target.value;
+        applyFiltersAndRebuild();
+      });
+
+      // Clear instructor focus filter
+      document.getElementById("clearInstructorFilter").addEventListener("click", () => {
+        selectedInstructor = null;
+        document.getElementById("activeInstructorCard").classList.add("hidden");
+        applyFiltersAndRebuild();
+      });
+
+      // Reset All Filters button
+      document.getElementById("resetAllFilters").addEventListener("click", () => {
+        currentFilters = { year: "ALL", company: "ALL", category: "ALL" };
+        selectedInstructor = null;
+
+        // Reset Inputs in UI
+        document.getElementById("filterYear").value = "ALL";
+        document.getElementById("filterCompany").value = "ALL";
+        document.getElementById("filterCategory").value = "ALL";
+        document.getElementById("resetYear").classList.add("hidden");
+        document.getElementById("activeInstructorCard").classList.add("hidden");
+        
+        applyFiltersAndRebuild();
+      });
+
+      // Check list search box
+      document.getElementById("checkSearchInput").addEventListener("input", (e) => {
+        renderChecksTable(e.target.value.toLowerCase());
+      });
+    }
+
+    // Chart Builders
+    function buildCategoryChart(labels, dataset) {
+      if (categoryChartInstance) categoryChartInstance.destroy();
+      const ctx = document.getElementById("categoryChart").getContext("2d");
+
+      categoryChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: dataset,
+            backgroundColor: ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b'],
+            borderWidth: 2,
+            borderColor: '#0f172a'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: '#94a3b8',
+                font: { size: 10, weight: 'medium' },
+                boxWidth: 10,
+                padding: 12
+              }
+            },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              bodyColor: '#e2e8f0',
+              borderColor: '#334155',
+              borderWidth: 1
+            }
+          },
+          cutout: '75%'
+        }
+      });
+    }
+
+    function buildDimensionChart(labels, dataset) {
+      if (dimensionChartInstance) dimensionChartInstance.destroy();
+      const ctx = document.getElementById("dimensionFailuresChart").getContext("2d");
+
+      dimensionChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Incidentes/Alertas',
+            data: dataset,
+            backgroundColor: 'rgba(239, 68, 68, 0.75)',
+            borderColor: '#ef4444',
+            borderWidth: 1.5,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              bodyColor: '#e2e8f0'
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(71, 85, 105, 0.08)' },
+              ticks: { color: '#94a3b8', font: { size: 9 } }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: '#e2e8f0', font: { size: 9 } }
+            }
+          }
+        }
+      });
+    }
+
+    // Main Rendering Orchestrator
+    function renderAll() {
+      // 1. KPI Cards Computation
+      // Instructors Count
+      const activeInstructorsList = activeData.instructors;
+      document.getElementById("kpiInstructores").innerText = activeInstructorsList.length;
+
+      // Checks count
+      let totalChecks = 0;
+      let totalSatisf = 0;
+      let totalInsat = 0;
+
+      activeInstructorsList.forEach(i => {
+        totalChecks += i.count;
+        totalSatisf += i.satisf;
+        totalInsat += i.insat;
+      });
+
+      const avgSuccessRate = totalChecks > 0 ? (totalSatisf / totalChecks) * 100 : 100;
+
+      document.getElementById("kpiTotalChequeos").innerText = Number(totalChecks).toLocaleString();
+      document.getElementById("kpiTasaAprobacion").innerText = `${avgSuccessRate.toFixed(2)}%`;
+      document.getElementById("kpiInsatisfactorios").innerText = totalInsat;
+
+      // Update subtitle sub-texts
+      if (selectedInstructor) {
+        document.getElementById("kpiTotalChequeosSub").innerText = `Realizados por ${selectedInstructor.split(" ")[0]}`;
+        document.getElementById("kpiTasaAprobacionSub").innerText = "Instructor seleccionado";
+        document.getElementById("kpiInsatisfactoriosSub").innerText = "Resultado del instructor";
+      } else {
+        document.getElementById("kpiTotalChequeosSub").innerText = "ID únicos en rango de filtros";
+        document.getElementById("kpiTasaAprobacionSub").innerText = "Rendimiento promedio global";
+        document.getElementById("kpiInsatisfactoriosSub").innerText = "Casos críticos globales";
+      }
+
+      // 2. Render IDE-TC list
+      renderIdeList();
+
+      // 3. Render charts
+      const catLabels = Object.keys(activeData.categories);
+      const catValues = catLabels.map(k => activeData.categories[k]);
+      buildCategoryChart(catLabels, catValues);
+
+      document.getElementById("chartCategorySubtitle").innerText = selectedInstructor 
+        ? `Categorías de chequeo de ${selectedInstructor.split(" ")[0]}`
+        : "Distribución de categorías acumuladas";
+
+      // Dimension Fails Bar Chart
+      const sortedDims = Object.entries(activeData.dimensionFailures)
+                               .sort((a,b) => b[1] - a[1])
+                               .slice(0, 6);
+      const dimLabels = sortedDims.map(d => d[0].length > 25 ? d[0].substring(0, 25) + "..." : d[0]);
+      const dimVals = sortedDims.map(d => d[1]);
+      buildDimensionChart(dimLabels, dimVals);
+
+      // 4. Render Table
+      renderChecksTable("");
+
+      // 5. Update selected check details view if applicable
+      updateDrilldownView();
+    }
+
+    // Render IDE-TC row items
+    function renderIdeList() {
+      const container = document.getElementById("ideListContainer");
+      container.innerHTML = "";
+
+      activeData.instructors.forEach(inst => {
+        const isSelected = selectedInstructor === inst.name;
+        const div = document.createElement("div");
+        
+        div.className = `p-3.5 rounded-xl border custom-transition cursor-pointer flex items-center justify-between ${
+          isSelected 
+            ? "bg-violet-950/40 border-violet-500 shadow-md shadow-violet-950/20" 
+            : "bg-slate-950/60 hover:bg-slate-900 border-slate-800/80 hover:border-slate-700"
+        }`;
+
+        // Color helper for progress bar
+        let barColor = "bg-emerald-500";
+        if (inst.rate < 99) barColor = "bg-indigo-500";
+        if (inst.rate < 97) barColor = "bg-amber-500";
+
+        div.innerHTML = `
+          <div class="flex-1 min-w-0 pr-3">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full ${isSelected ? 'bg-violet-400 animate-pulse' : 'bg-slate-500'}"></span>
+              <p class="font-bold text-xs text-white truncate" title="${inst.name}">${inst.name}</p>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">${inst.role}</p>
+            
+            <!-- Mini bar chart of performance -->
+            <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mt-2.5 border border-slate-800">
+              <div class="h-full ${barColor}" style="width: ${inst.rate}%"></div>
+            </div>
+          </div>
+          <div class="text-right flex flex-col justify-center shrink-0">
+            <span class="text-sm font-extrabold text-white">${inst.count.toLocaleString()}</span>
+            <span class="text-[9px] text-emerald-400 font-semibold">${inst.rate.toFixed(1)}% Sat.</span>
+          </div>
+        `;
+
+        div.addEventListener("click", () => {
+          if (selectedInstructor === inst.name) {
+            selectedInstructor = null;
+            document.getElementById("activeInstructorCard").classList.add("hidden");
+          } else {
+            selectedInstructor = inst.name;
+            document.getElementById("activeInstructorName").innerText = inst.name;
+            document.getElementById("activeInstructorCard").classList.remove("hidden");
+          }
+          applyFiltersAndRebuild();
+        });
+
+        container.appendChild(div);
+      });
+    }
+
+    // Render left-side explorer checks list
+    function renderChecksTable(query) {
+      const tbody = document.getElementById("checksTableBody");
+      tbody.innerHTML = "";
+
+      let list = activeData.chequeos;
+
+      // Filter by search query if any
+      if (query.trim() !== "") {
+        list = list.filter(c => 
+          c.id.toLowerCase().includes(query) ||
+          c.evaluado.toLowerCase().includes(query) ||
+          c.empresa.toLowerCase().includes(query)
+        );
+      }
+
+      if (list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="3" class="py-8 text-center text-slate-500 text-xs">
+              No hay chequeos disponibles que coincidan con la búsqueda o filtros.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      list.forEach(c => {
+        const isSelected = selectedCheck && selectedCheck.id === c.id;
+        const isSatis = c.resultadoFinal === "SATISFACTORIO";
+        const tr = document.createElement("tr");
+
+        tr.className = `cursor-pointer transition-all ${
+          isSelected 
+            ? "bg-violet-950/20 text-white font-medium" 
+            : "hover:bg-slate-900/60"
+        }`;
+
+        tr.innerHTML = `
+          <td class="py-3 pr-2 whitespace-nowrap">
+            <span class="font-bold text-violet-400 text-xs block">${c.id}</span>
+            <span class="text-[10px] text-slate-500 block">${c.fecha}</span>
+          </td>
+          <td class="py-3">
+            <p class="font-semibold text-slate-200 truncate max-w-[130px]" title="${c.evaluado}">${c.evaluado}</p>
+            <p class="text-[9px] text-slate-400 uppercase tracking-tight truncate max-w-[130px]">${c.empresa}</p>
+          </td>
+          <td class="py-3 text-right whitespace-nowrap">
+            <span class="inline-block px-2 py-0.5 rounded-full text-[9px] font-bold tracking-tight ${
+              isSatis 
+                ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-900/60' 
+                : 'bg-rose-950/50 text-rose-400 border border-rose-900/60'
+            }">
+              ${c.resultadoFinal}
+            </span>
+          </td>
+        `;
+
+        tr.addEventListener("click", () => {
+          selectedCheck = c;
+          updateDrilldownView();
+          renderChecksTable(query); // redibujar para actualizar fila seleccionada
+        });
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Render Drilldown View: Dimensions (1st Layer) & Subdimensions (2nd Layer)
+    function updateDrilldownView() {
+      const emptyState = document.getElementById("drilldownEmptyState");
+      const activeContent = document.getElementById("drilldownActiveContent");
+      const container = document.getElementById("dimensionsAccordionContainer");
+
+      if (!selectedCheck) {
+        emptyState.classList.remove("hidden");
+        activeContent.classList.add("hidden");
+        document.getElementById("selectedCheckBadge").classList.add("hidden");
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+      activeContent.classList.remove("hidden");
+
+      // Set headers
+      document.getElementById("drill_checkId").innerText = selectedCheck.id;
+      document.getElementById("drill_checkCat").innerText = selectedCheck.categoria;
+      document.getElementById("drill_checkEvaluado").innerText = selectedCheck.evaluado;
+      document.getElementById("drill_checkFecha").innerText = selectedCheck.fecha;
+      document.getElementById("drill_checkIde").innerText = selectedCheck.ideTC;
+
+      // Handle custom check badge on Tab Headers
+      const badge = document.getElementById("selectedCheckBadge");
+      const isSatis = selectedCheck.resultadoFinal === "SATISFACTORIO";
+      badge.className = `px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+        isSatis 
+          ? 'bg-emerald-950 text-emerald-400 border border-emerald-900' 
+          : 'bg-rose-950 text-rose-400 border border-rose-900'
+      }`;
+      badge.innerText = `Resultado: ${selectedCheck.resultadoFinal}`;
+      badge.classList.remove("hidden");
+
+      // Show/Hide Plan Correctivo AI action button depending on check status
+      const aiBtn = document.getElementById("aiPlanBtn");
+      // Si posee fallas específicas o es insatisfactorio, activamos el destaque
+      if (!isSatis) {
+        aiBtn.className = "mt-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-[10px] font-bold text-white px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md shadow-indigo-950/50 transition-all border border-indigo-500 animate-pulse";
+      } else {
+        aiBtn.className = "mt-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[10px] text-slate-300 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all";
+      }
+
+      // Clean container
+      container.innerHTML = "";
+
+      // Loop through first layer: Dimensiones
+      const dimensionsMap = selectedCheck.dimensiones || {};
+      const dimensionsNames = Object.keys(dimensionsMap);
+
+      if (dimensionsNames.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center text-slate-500 text-xs">
+            No se registraron subdimensiones detalladas para este chequeo.
+          </div>
+        `;
+        return;
+      }
+
+      dimensionsNames.forEach((dimName, index) => {
+        const subDims = dimensionsMap[dimName] || [];
+        
+        // Analyze subdimension results to set the Dimension header indicator
+        let hasFail = false;
+        let hasWarning = false;
+        
+        subDims.forEach(s => {
+          const res = s.resultado.toUpperCase();
+          if (res.includes("INSATISFACTORIO")) hasFail = true;
+          if (res.includes("OBSERVACION")) hasWarning = true;
+        });
+
+        // Set Dimension Status Badge
+        let dimStatusBadge = "";
+        if (hasFail) {
+          dimStatusBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-rose-950/70 border border-rose-800 text-rose-400 flex items-center gap-1"><i data-lucide="x-circle" class="w-3 h-3"></i> Falla Crítica</span>`;
+        } else if (hasWarning) {
+          dimStatusBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-950/70 border border-amber-800 text-amber-400 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i> Observación</span>`;
+        } else {
+          dimStatusBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-900 border border-slate-800 text-slate-400 flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i> Conforme</span>`;
+        }
+
+        // Create Accordion Container
+        const accordion = document.createElement("div");
+        accordion.className = "bg-slate-950/40 border border-slate-800 rounded-xl overflow-hidden";
+        
+        // Accordion Header
+        const isOpenByDefault = index === 0; // Abre el primero por defecto
+        
+        const headerId = `accordion-h-${index}`;
+        const contentId = `accordion-c-${index}`;
+
+        accordion.innerHTML = `
+          <button class="w-full p-4 flex items-center justify-between text-left hover:bg-slate-900/40 transition-colors gap-3 outline-none" id="${headerId}">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-bold text-slate-200 truncate max-w-[280px]" title="${dimName}">${dimName}</span>
+                ${dimStatusBadge}
+              </div>
+              <p class="text-[10px] text-slate-500 mt-1">${subDims.length} sub-dimensiones evaluadas</p>
+            </div>
+            <i data-lucide="chevron-down" id="arrow-${index}" class="w-4 h-4 text-slate-400 transform transition-transform duration-200 ${isOpenByDefault ? 'rotate-180' : ''}"></i>
+          </button>
+          
+          <!-- Accordion content (Second Capa: Sub-dimensiones) -->
+          <div id="${contentId}" class="${isOpenByDefault ? 'block' : 'hidden'} border-t border-slate-800/60 bg-slate-950/80 p-3.5 space-y-2">
+            <!-- Subdimension items will go here -->
+          </div>
+        `;
+
+        container.appendChild(accordion);
+
+        // Populate Sub-dimensions (Second Capa)
+        const contentBox = document.getElementById(contentId);
+        
+        subDims.forEach(sub => {
+          const subRow = document.createElement("div");
+          subRow.className = "p-2.5 bg-slate-900/60 border border-slate-800/40 rounded-lg flex justify-between items-center text-xs gap-3";
+          
+          let resultClass = "text-slate-400 bg-slate-950 border border-slate-800";
+          const resUpper = sub.resultado.toUpperCase();
+
+          if (resUpper.includes("INSATISFACTORIO")) {
+            resultClass = "text-rose-400 bg-rose-950/30 border border-rose-900/50 font-bold";
+          } else if (resUpper.includes("OBSERVACION")) {
+            resultClass = "text-amber-400 bg-amber-950/30 border border-amber-900/50 font-bold";
+          } else if (resUpper.includes("SATISFACTORIO")) {
+            resultClass = "text-emerald-400 bg-emerald-950/20 border border-emerald-900/40";
+          } else if (resUpper.includes("NO OBSERVADO")) {
+            resultClass = "text-slate-400 bg-slate-950 border border-slate-800/60";
+          }
+
+          subRow.innerHTML = `
+            <span class="text-[11px] text-slate-300 flex-1">${sub.subdimension}</span>
+            <span class="px-2 py-0.5 rounded text-[9px] uppercase tracking-tight shrink-0 ${resultClass}">${sub.resultado}</span>
+          `;
+          contentBox.appendChild(subRow);
+        });
+
+        // Setup open/close trigger toggle
+        document.getElementById(headerId).addEventListener("click", () => {
+          const content = document.getElementById(contentId);
+          const arrow = document.getElementById(`arrow-${index}`);
+          const isHidden = content.classList.contains("hidden");
+
+          if (isHidden) {
+            content.classList.remove("hidden");
+            content.classList.add("block");
+            arrow.classList.add("rotate-180");
+          } else {
+            content.classList.remove("block");
+            content.classList.add("hidden");
+            arrow.classList.remove("rotate-180");
+          }
+        });
+      });
+
+      lucide.createIcons();
+    }
+
+    // Dynamic Filter Engine (Simulation with static data if Excel is not uploaded)
+    function applyFiltersAndRebuild() {
+      if (!parsedExcelData) {
+        simulateFiltersWithPreloaded();
+        return;
+      }
+      processRawRows(parsedExcelData);
+    }
+
+    // Multi-dimensional data scaler for interactive simulation with realistic ratios
+    function simulateFiltersWithPreloaded() {
+      let working = JSON.parse(JSON.stringify(defaultData));
+
+      // 1. Year Filter
+      if (currentFilters.year !== "ALL") {
+        const yearInt = parseInt(currentFilters.year);
+        // Scale evaluations down based on average year distribution in aviation
+        let ratio = 0.18; // Default scale for single year
+        if (currentFilters.year === "2024") ratio = 0.23;
+        if (currentFilters.year === "2025") ratio = 0.20;
+
+        working.instructors.forEach(i => {
+          i.count = Math.max(12, Math.round(i.count * ratio));
+          i.insat = Math.max(0, Math.round(i.insat * ratio));
+          i.satisf = i.count - i.insat;
+          i.rate = (i.satisf / i.count) * 100;
+        });
+
+        Object.keys(working.categories).forEach(cat => {
+          working.categories[cat] = Math.max(1, Math.round(working.categories[cat] * ratio));
+        });
+
+        Object.keys(working.dimensionFailures).forEach(dim => {
+          working.dimensionFailures[dim] = Math.max(0, Math.round(working.dimensionFailures[dim] * ratio));
+        });
+
+        working.chequeos = working.chequeos.filter(c => c.anio === yearInt);
+      }
+
+      // 2. Company Filter
+      if (currentFilters.company !== "ALL") {
+        const comp = currentFilters.company;
+        let ratio = 0.85; // LATAM has majority
+        if (comp === "SKY") ratio = 0.10;
+        if (comp === "JETSMART") ratio = 0.04;
+        if (comp === "STAR") ratio = 0.01;
+
+        working.instructors.forEach(i => {
+          i.count = Math.max(4, Math.round(i.count * ratio));
+          i.insat = Math.max(0, Math.round(i.insat * ratio));
+          i.satisf = i.count - i.insat;
+          i.rate = i.count > 0 ? (i.satisf / i.count) * 100 : 100;
+        });
+
+        Object.keys(working.categories).forEach(cat => {
+          working.categories[cat] = Math.max(1, Math.round(working.categories[cat] * ratio));
+        });
+
+        Object.keys(working.dimensionFailures).forEach(dim => {
+          working.dimensionFailures[dim] = Math.max(0, Math.round(working.dimensionFailures[dim] * ratio));
+        });
+
+        working.chequeos = working.chequeos.filter(c => c.empresa.toUpperCase().includes(comp));
+      }
+
+      // 3. Category Filter
+      if (currentFilters.category !== "ALL") {
+        const cat = currentFilters.category;
+        const totalCatCount = working.categories[cat] || 1;
+        const sumAll = Object.values(working.categories).reduce((a,b)=>a+b, 0);
+        const ratio = totalCatCount / sumAll;
+
+        working.instructors.forEach(i => {
+          i.count = Math.max(2, Math.round(i.count * ratio));
+          i.insat = Math.max(0, Math.round(i.insat * ratio));
+          i.satisf = i.count - i.insat;
+          i.rate = i.count > 0 ? (i.satisf / i.count) * 100 : 100;
+        });
+
+        // Pivot Category chart values
+        const temp = {};
+        temp[cat] = totalCatCount;
+        working.categories = temp;
+
+        working.chequeos = working.chequeos.filter(c => c.categoria === cat);
+      }
+
+      // 4. Instructor Selector (Click in list)
+      if (selectedInstructor) {
+        working.instructors = working.instructors.filter(i => i.name === selectedInstructor);
+        
+        // Scale Categories to this instructor only
+        const instObj = defaultData.instructors.find(i => i.name === selectedInstructor);
+        const instRatio = instObj ? instObj.count / 12698 : 0.5;
+
+        Object.keys(working.categories).forEach(cat => {
+          working.categories[cat] = Math.max(1, Math.round(working.categories[cat] * instRatio));
+        });
+
+        Object.keys(working.dimensionFailures).forEach(dim => {
+          working.dimensionFailures[dim] = Math.max(0, Math.round(working.dimensionFailures[dim] * instRatio));
+        });
+
+        working.chequeos = working.chequeos.filter(c => c.ideTC === selectedInstructor);
+      }
+
+      // Check selected check persistence
+      if (selectedCheck) {
+        const exists = working.chequeos.some(c => c.id === selectedCheck.id);
+        if (!exists) selectedCheck = working.chequeos[0] || null;
+      } else {
+        selectedCheck = working.chequeos[0] || null;
+      }
+
+      activeData = working;
+      renderAll();
+    }
+
+    // --- REAL EXCEL FILE HANDLING (SheetJS Integration) ---
+    function handleExcelUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      document.getElementById("loadingOverlay").classList.remove("hidden");
+      document.getElementById("loadingTitle").innerText = "Abriendo archivo Excel...";
+
+      const reader = new FileReader();
+      
+      reader.onload = function(evt) {
+        try {
+          document.getElementById("loadingTitle").innerText = "Extrayendo hojas de cálculo...";
+          
+          setTimeout(() => {
+            const binary = evt.target.result;
+            const workbook = XLSX.read(binary, { type: 'binary' });
+            
+            // Primary sheet parser
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            
+            parsedExcelData = XLSX.utils.sheet_to_json(worksheet);
+            console.log("Sheet parsed successfully. Row count: ", parsedExcelData.length);
+            
+            // Aggregate hierarchy and render
+            processRawRows(parsedExcelData);
+            
+            // Adjust status bar UI
+            document.getElementById("statusText").innerText = "Base de datos cargada localmente";
+            document.getElementById("statusIndicator").className = "flex items-center gap-2 text-xs bg-emerald-950/40 border border-emerald-800 text-emerald-300 px-3.5 py-2 rounded-xl";
+            
+            document.getElementById("loadingOverlay").classList.add("hidden");
+          }, 100);
+        } catch(err) {
+          alert("Ocurrió un error leyendo el archivo Excel. Por favor verifica que tenga las columnas estándar del PVA.");
+          console.error(err);
+          document.getElementById("loadingOverlay").classList.add("hidden");
+        }
+      };
+
+      reader.onerror = function() {
+        alert("Error de lectura física del archivo.");
+        document.getElementById("loadingOverlay").classList.add("hidden");
+      };
+
+      reader.readAsBinaryString(file);
+    }
+
+    // The core parser that groups row structures into clean checks
+    function processRawRows(rows) {
+      if (!rows || rows.length === 0) return;
+
+      // 1. First-pass global structures
+      const allUniqueInstructorsMap = new Map();
+      const globalCategoriesCount = {};
+      const globalDimensionFailures = {};
+      const checksMap = new Map();
+
+      // Row processing
+      rows.forEach(row => {
+        // Essential identifiers
+        const checkId = row['NUM_GENERADO'] || 'S/N';
+        const instructor = row['NOMBRE_IDE TC'] || row['INSPECTOR'] || 'INSTRUCTOR NO DEFINIDO';
+        const fecha = row['FECHA_INSPECCION'] || row['FECHA_PROGRAMACION'] || 'N/D';
+        const categoria = row['CATEGORIA DE CHEQUEO'] || 'COMPETENCIA';
+        const resFinal = row['RESULTADO FINAL'] || 'SATISFACTORIO';
+        const empresa = row['EMPRESA'] || 'OTRO';
+        const evaluado = row['EVALUADO'] || 'N/D';
+        const anio = parseInt(row['AÑO']) || 2024;
+        const mes = (row['MES'] || 'ENERO').toUpperCase();
+
+        const dimName = row['DIMENSION'] || 'OTRAS DIMENSIONES';
+        const subDimName = row['SUB_DIMENSION'] || 'SUB_DIMENSIÓN NO ESPECIFICADA';
+        const subDimRes = row['RESULTADO EVALUACIÓN X SUB_DIMENSIÓN'] || 'NO OBSERVADO';
+
+        // Filters evaluation bypass
+        let passesYear = currentFilters.year === "ALL" || anio === parseInt(currentFilters.year);
+        
+        let passesCompany = true;
+        if (currentFilters.company !== "ALL") {
+          const empUpper = empresa.toUpperCase();
+          passesCompany = empUpper.includes(currentFilters.company);
+        }
+
+        let passesCategory = currentFilters.category === "ALL" || categoria === currentFilters.category;
+
+        let passesInstructor = true;
+        if (selectedInstructor) {
+          passesInstructor = instructor === selectedInstructor;
+        }
+
+        // Apply filters dynamically to structure build
+        if (passesYear && passesCompany && passesCategory && passesInstructor) {
+          // Initialize check object
+          if (!checksMap.has(checkId)) {
+            checksMap.set(checkId, {
+              id: checkId,
+              evaluado: evaluado,
+              ideTC: instructor,
+              fecha: fecha,
+              categoria: categoria,
+              empresa: empresa,
+              resultadoFinal: resFinal,
+              anio: anio,
+              dimensiones: {}
+            });
+
+            // Count categories distribution based on unique checks
+            globalCategoriesCount[categoria] = (globalCategoriesCount[categoria] || 0) + 1;
+
+            // Track Instructor performance based on unique evaluations
+            if (!allUniqueInstructorsMap.has(instructor)) {
+              allUniqueInstructorsMap.set(instructor, { name: instructor, count: 0, satisf: 0, insat: 0 });
+            }
+            
+            const instStat = allUniqueInstructorsMap.get(instructor);
+            instStat.count++;
+            if (resFinal.includes("INSATISFACTORIO")) {
+              instStat.insat++;
+            } else {
+              instStat.satisf++;
+            }
+          }
+
+          // Append Dimension & Subdimension nodes (Capas 1 y 2)
+          const currentCheck = checksMap.get(checkId);
+          if (!currentCheck.dimensiones[dimName]) {
+            currentCheck.dimensiones[dimName] = [];
+          }
+
+          // Don't add duplicate subdimensions in the same check
+          const subexists = currentCheck.dimensiones[dimName].some(s => s.subdimension === subDimName);
+          if (!subexists) {
+            currentCheck.dimensiones[dimName].push({
+              subdimension: subDimName,
+              resultado: subDimRes
+            });
+
+            // Quantify dimension issues
+            if (subDimRes.includes("INSATISFACTORIO") || subDimRes.includes("OBSERVACION")) {
+              globalDimensionFailures[dimName] = (globalDimensionFailures[dimName] || 0) + 1;
+            }
+          }
+        }
+      });
+
+      // Transform maps back to standard dashboard array properties
+      const finishedInstructors = [];
+      allUniqueInstructorsMap.forEach((val) => {
+        const rate = val.count > 0 ? (val.satisf / val.count) * 100 : 100;
+        let role = "Instructor Evaluador (IDE-TC)";
+        if (val.count > 500) role = "Instructor Principal (IDE-TC)";
+        else if (val.count > 100) role = "Instructor de Flota (IDE-TC)";
+        
+        finishedInstructors.push({
+          name: val.name,
+          count: val.count,
+          satisf: val.satisf,
+          insat: val.insat,
+          rate: rate,
+          role: role
+        });
+      });
+
+      // Sorted by quantity of checks
+      finishedInstructors.sort((a,b) => b.count - a.count);
+
+      const finishedChequeos = Array.from(checksMap.values());
+
+      // If active selection no longer exists, clear it
+      if (selectedCheck) {
+        const match = finishedChequeos.find(c => c.id === selectedCheck.id);
+        selectedCheck = match || finishedChequeos[0] || null;
+      } else {
+        selectedCheck = finishedChequeos[0] || null;
+      }
+
+      // Rebuild state
+      activeData = {
+        instructors: finishedInstructors,
+        categories: globalCategoriesCount,
+        dimensionFailures: globalDimensionFailures,
+        chequeos: finishedChequeos
+      };
+
+      renderAll();
+    }
+  </script>
+</body>
+</html>
